@@ -1,5 +1,10 @@
 import javax.imageio.ImageIO;
 import javax.swing.*;
+
+import javafx.scene.input.ZoomEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
+
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -10,9 +15,9 @@ import java.io.IOException;
 class Image extends Component {
     BufferedImage image;
 
-    Image() {
+    public Image (String filename) {
         try {
-            image = ImageIO.read(new File("img.png"));
+            image = ImageIO.read(new File(filename));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -30,6 +35,50 @@ class Image extends Component {
             }
         }
     }
+
+    public void resizeScale (double scaleFactor) {
+        int w = (int)Math.round(image.getWidth() * scaleFactor);
+        int h = (int)Math.round(image.getHeight() * scaleFactor);
+        BufferedImage resizedImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics2D = resizedImage.createGraphics();
+        graphics2D.drawImage(image, 0, 0, w, h, null);
+        graphics2D.dispose();
+        image = resizedImage;
+    }
+
+    public void resizeToPixels (double pixels, boolean isWidth) {
+        int w = 0;
+        int h = 0;
+        if (isWidth) {
+            // autoscale height
+            w = (int)pixels;
+            h = (int)Math.round(pixels/image.getWidth() * image.getHeight());
+        } else {
+            // autoscale width
+            h = (int)pixels;
+            w = (int)Math.round(pixels/image.getHeight() * image.getWidth());
+        }
+        BufferedImage resizedImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics2D = resizedImage.createGraphics();
+        graphics2D.drawImage(image, 0, 0, w, h, null);
+        graphics2D.dispose();
+        image = resizedImage;
+    }
+
+    public void resizeToSquare () {
+        int length = 0;
+        if (image.getWidth() < image.getHeight()) {
+            length = image.getWidth();
+        } else {
+            length = image.getHeight();
+        }
+        BufferedImage resizedImage = new BufferedImage(length, length, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics2D = resizedImage.createGraphics();
+        graphics2D.drawImage(image, 0, 0, length, length, null);
+        graphics2D.dispose();
+        image = resizedImage;
+    }
+
 }
 
 public class main {
@@ -41,9 +90,16 @@ public class main {
             }
         });
 
-        Image image = new Image();
-        frame.add(image);
-        frame.setPreferredSize(new Dimension(image.getWidth(), image.getHeight()));
+        int randIdx = (int)(Math.random() * 10);
+        Image img = new Image("images/fruit_0000.jpg");
+        // img.resizeScale(0.3);
+        img.resizeToPixels(200, false);
+        frame.add(img);
+
+        frame.setPreferredSize(new Dimension(800, 600));
+
+        // add ZoomEvent listener
+        
         frame.pack();
         frame.setVisible(true);
     }
