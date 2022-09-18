@@ -62,41 +62,40 @@ public class ImageZoom {
         panel.addMouseWheelListener(new MouseWheelListener() {
             public void mouseWheelMoved(MouseWheelEvent e) {
                 int notches = e.getWheelRotation();
+                System.out.printf("notches: %d\n", notches);
                 if (notches > 0) {
-                    //System.out.println(notches);
-                    double temp = (notches * 0.2) + 1;
-                    //System.out.println(temp);
-                    resizeScale(temp, panel);
-                    //resizeScale(temp);
-                    //zoom = temp;
-                    panel.repaint();
-                    // minimum zoom factor is 1.0
-//                temp = Math.max(temp, 1.0);
-//                if (temp != zoom) {
-//                    zoom = temp;
-//                    resizeScale(zoom);
-//                    panel.repaint();
-//                }
+                    if (zoom < 128) {
+                        double temp = (notches*1) + 1;
+                        resizeScale(temp, panel);
+                        zoom = zoom * temp;
+                        System.out.printf("zoom: %f\n", zoom);
+                    } else {
+                        System.out.printf("zoom maxed out\n");
+                    }
                 }
-                }
+            }
         });
         scrollPane.setViewportView(panel);
     }
 
     public void resizeScale (double scaleFactor, JPanel panel) {
-        int w = (int)Math.round(label.getIcon().getIconWidth() * scaleFactor);
-        int h = (int)Math.round(label.getIcon().getIconHeight() * scaleFactor);
+        // calculate new width and height
+        int w = (int)Math.round(image.getWidth() * scaleFactor);
+        int h = (int)Math.round(image.getHeight() * scaleFactor);
 
+        // create new bufferedimage object with new size, then draw image to new object
         BufferedImage resizedImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics2D = resizedImage.createGraphics();
         graphics2D.drawImage(image, 0, 0, w, h, null);
         graphics2D.dispose();
         image = resizedImage;
 
-        label = new JLabel( new ImageIcon(image) );
-        panel.remove(0);
+        // place resized image in new jlabel and replace old
+        label = new JLabel( new ImageIcon(resizedImage) );
+        panel.removeAll();
         panel.add(label, BorderLayout.CENTER);
-
+        panel.repaint();
+        panel.validate();
     }
 
 
