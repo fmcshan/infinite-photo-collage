@@ -66,8 +66,8 @@ public class ImageZoom {
                 if (notches > 0) {
                     if (zoom < 128) {
                         double temp = (notches*1) + 1;
-                        resizeScale(temp, panel);
                         zoom = zoom * temp;
+                        resizeScale(temp, panel);
                         System.out.printf("zoom: %f\n", zoom);
                     } else {
                         System.out.printf("zoom maxed out\n");
@@ -86,7 +86,10 @@ public class ImageZoom {
         // create new bufferedimage object with new size, then draw image to new object
         BufferedImage resizedImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics2D = resizedImage.createGraphics();
-        graphics2D.drawImage(image, 0, 0, w, h, null);
+
+        drawPixelByPixel(graphics2D);
+
+//        graphics2D.drawImage(image, 0, 0, w, h, null);
         graphics2D.dispose();
         image = resizedImage;
 
@@ -98,5 +101,21 @@ public class ImageZoom {
         panel.validate();
     }
 
+    public void drawPixelByPixel(Graphics g) {
+        int pixelLength = (int) zoom;
+        for (int y = 0; y < image.getHeight(); y++) {
+//            System.out.println("height: " + image.getHeight());
+//            System.out.println("width: " + image.getWidth());
+            for (int x = 0; x < image.getWidth(); x++) {
+                int color = image.getRGB(x * (pixelLength / 2), y * (pixelLength / 2));
+                int red = (color & 0x00ff0000) >> 16;
+                int green = (color & 0x0000ff00) >> 8;
+                int blue = color & 0x000000ff;
+                g.setColor(new Color(red, green, blue));
+                g.fillRect(x * pixelLength, y * pixelLength, pixelLength, pixelLength);
+//                g.drawLine(x, y, x, y);
+            }
+        }
+    }
 
 }
