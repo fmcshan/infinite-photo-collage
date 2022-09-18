@@ -16,6 +16,12 @@ class Image extends Component {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        int newImageWidth = image.getWidth() * 2;
+        int newImageHeight = image.getHeight() * 2;
+        BufferedImage resizedImage = new BufferedImage(newImageWidth , newImageHeight, 1);
+        Graphics2D g = resizedImage.createGraphics();
+        g.drawImage(image, 0, 0, newImageWidth , newImageHeight , null);
+        g.dispose();
     }
 
     public void paint(Graphics g) {
