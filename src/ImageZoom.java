@@ -9,20 +9,20 @@ import javax.swing.JPanel;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 public class ImageZoom {
 
-
     public static final int SCALE_DEFAULT = 1;
-
+    private static final double EDGE_TOLERANCE = 0.3;
     private JFrame frmImageZoomIn;
-    private static final String inputImage = "fruit_0000.jpg";
+    // private String imageFilePath = "fruit_0000.jpg";
     private JLabel label = null;
-    private double zoom = 1.0;  // zoom factor
     private BufferedImage image = null;
-
+    private int pixelSize = 1;  // side length of 1 pixel in original image
 
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
@@ -46,29 +46,40 @@ public class ImageZoom {
         frmImageZoomIn.setBounds(100, 100, 450, 300);
         frmImageZoomIn.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        // add scrolling ability
         JScrollPane scrollPane = new JScrollPane();
         frmImageZoomIn.getContentPane().add(scrollPane, BorderLayout.CENTER);
 
-        image = ImageIO.read(new File(inputImage));
+        // prompt for image file name
+        System.out.println("Enter an image file name:");
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        String filename = br.readLine();
+        try {
+            image = ImageIO.read(new File(filename));
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+        getAverageColor(image, false);
 
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
 
         // display image as icon
-        Icon imageIcon = new ImageIcon(inputImage);
+        Icon imageIcon = new ImageIcon(filename);
         label = new JLabel( imageIcon );
         panel.add(label, BorderLayout.CENTER);
 
+        // add zoom ability. can only zoom in 
         panel.addMouseWheelListener(new MouseWheelListener() {
             public void mouseWheelMoved(MouseWheelEvent e) {
                 int notches = e.getWheelRotation();
-                System.out.printf("notches: %d\n", notches);
+                // System.out.printf("notches: %d\n", notches);
                 if (notches > 0) {
-                    if (zoom < 128) {
-                        double temp = (notches*1) + 1;
-                        zoom = zoom * temp;
+                    if (pixelSize < 64) {
+                        int temp = (int)((notches*SCALE_DEFAULT) + 1);
+                        pixelSize = pixelSize * temp;
                         resizeScale(temp, panel);
-                        System.out.printf("zoom: %f\n", zoom);
+                        System.out.printf("pixelSize: %d\n", pixelSize);
                     } else {
                         System.out.printf("zoom maxed out\n");
                     }
@@ -78,20 +89,29 @@ public class ImageZoom {
         scrollPane.setViewportView(panel);
     }
 
+    /**
+     * Rescale and display image, which replaces current image
+     * @param scaleFactor
+     * @param panel
+     */
     public void resizeScale (double scaleFactor, JPanel panel) {
         // calculate new width and height
-        int w = (int)Math.round(image.getWidth() * scaleFactor);
-        int h = (int)Math.round(image.getHeight() * scaleFactor);
+        int w = (int)Math.ceil(image.getWidth() * scaleFactor);
+        int h = (int)Math.ceil(image.getHeight() * scaleFactor);
 
-        // create new bufferedimage object with new size, then draw image to new object
+        // create new bufferedimage object with new dimensions
         BufferedImage resizedImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+
+        // draw resized image
         Graphics2D graphics2D = resizedImage.createGraphics();
-
-        drawPixelByPixel(graphics2D);
-
-//        graphics2D.drawImage(image, 0, 0, w, h, null);
+        graphics2D.drawImage(image, 0, 0, w, h, null);
         graphics2D.dispose();
         image = resizedImage;
+
+        // redraw image pixel by pixel
+        // drawPixelByPixel(graphics2D);
+        // graphics2D.dispose();
+        // image = resizedImage;
 
         // place resized image in new jlabel and replace old
         label = new JLabel( new ImageIcon(resizedImage) );
@@ -101,21 +121,71 @@ public class ImageZoom {
         panel.validate();
     }
 
+    /**
+     * Draw an image one pixel area at a time on a given graphic. Pixel area refers to the space an original pixel should cover.
+     * @param g
+     */
     public void drawPixelByPixel(Graphics g) {
-        int pixelLength = (int) zoom;
         for (int y = 0; y < image.getHeight(); y++) {
-//            System.out.println("height: " + image.getHeight());
-//            System.out.println("width: " + image.getWidth());
-            for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getRGB(x * (pixelLength / 2), y * (pixelLength / 2));
+            for (int x = 0; x < image.getWidth(); x++) { 
+                // get the RGB color from space of original pixel
+                int color = image.getRGB(x, y);
                 int red = (color & 0x00ff0000) >> 16;
                 int green = (color & 0x0000ff00) >> 8;
                 int blue = color & 0x000000ff;
+
+                // fill resized pixel with color
                 g.setColor(new Color(red, green, blue));
-                g.fillRect(x * pixelLength, y * pixelLength, pixelLength, pixelLength);
-//                g.drawLine(x, y, x, y);
+                g.fillRect(x, y, pixelSize+1, pixelSize+1);
             }
         }
+    }
+
+    /**
+     * Calculate the average color of a given image. Choose to include or exclude the edge colors with a set threshold.
+     * @param img
+     * @param includeEdges
+     * @return average color
+     */
+    public Color getAverageColor(BufferedImage img, boolean includeEdges) {
+        int red = 0;
+        int green = 0;
+        int blue = 0;
+        int numPixels = 0;
+        int startX = 0;
+        int startY = 0;
+        int endX = image.getWidth();
+        int endY = image.getHeight();
+
+        if (!includeEdges) {
+            startX = (int)(EDGE_TOLERANCE * image.getWidth());
+            startY = (int)(EDGE_TOLERANCE * image.getHeight());
+            endX = (int)(image.getWidth() - (EDGE_TOLERANCE * image.getWidth()));
+            endY = (int)(image.getHeight() - (EDGE_TOLERANCE * image.getHeight()));
+        }
+        
+        // from every pixel, get the total R,G,B values
+        for (int y = startY; y < endY; y++) {
+            for (int x = startX; x < endX; x++) {
+                int color = image.getRGB(x, y);
+                red += (color & 0x00ff0000) >> 16;
+                green += (color & 0x0000ff00) >> 8;
+                blue += color & 0x000000ff;
+                numPixels++;
+            }
+        }
+
+        // resulting average color
+        Color averageColor = new Color(red/numPixels, green/numPixels, blue/numPixels);
+
+        // https://community.oracle.com/tech/developers/discussion/1206435/convert-java-awt-color-to-hex-string
+        // print out RGB and hex code of color
+        String r = Integer.toHexString(averageColor.getRed());
+        String g = Integer.toHexString(averageColor.getGreen());
+        String b = Integer.toHexString(averageColor.getBlue());
+        System.out.printf("average color: #%s%s%s, %s", r, g, b, averageColor);
+
+        return averageColor;
     }
 
 }
