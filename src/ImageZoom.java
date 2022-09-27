@@ -5,21 +5,26 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
+
+import javafx.scene.image.PixelFormat.Type;
+
 import javax.swing.JPanel;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
 public class ImageZoom {
 
-    public static final int SCALE_DEFAULT = 1;
-    private static final double EDGE_TOLERANCE = 0.3;
+    public static final int SCALE_DEFAULT = 1; // 
+    double EDGE_TOLERANCE = 0.3; // percent of image width/height to ignore around edges when color matching
+    int COLOR_TOLERANCE = 707070; // tolerance for matching colors
+    int MAX_ZOOM = 50; // max side length of 1 original pixel before image replacement
     private JFrame frmImageZoomIn;
-    // private String imageFilePath = "fruit_0000.jpg";
     private JLabel label = null;
     private BufferedImage image = null;
     private int pixelSize = 1;  // side length of 1 pixel in original image
@@ -36,11 +41,11 @@ public class ImageZoom {
             }
         });
     }
-    public ImageZoom() throws IOException {
+    public ImageZoom() throws Exception {
         initialize();
     }
 
-    private void initialize() throws IOException {
+    private void initialize() throws Exception {
         frmImageZoomIn = new JFrame();
         frmImageZoomIn.setTitle("Image Zoom In and Zoom Out");
         frmImageZoomIn.setBounds(100, 100, 450, 300);
@@ -75,13 +80,18 @@ public class ImageZoom {
                 int notches = e.getWheelRotation();
                 // System.out.printf("notches: %d\n", notches);
                 if (notches > 0) {
-                    if (pixelSize < 64) {
+                    if (pixelSize < MAX_ZOOM) {
                         int temp = (int)((notches*SCALE_DEFAULT) + 1);
-                        pixelSize = pixelSize * temp;
-                        resizeScale(temp, panel);
+                        pixelSize = pixelSize + (temp);
+                        resize(panel);
                         System.out.printf("pixelSize: %d\n", pixelSize);
                     } else {
                         System.out.printf("zoom maxed out\n");
+                        try {
+                            replacePixelsWithImages(panel);
+                        } catch (Exception e1) {
+                            e1.printStackTrace();
+                        }
                     }
                 }
             }
@@ -94,23 +104,18 @@ public class ImageZoom {
      * @param scaleFactor
      * @param panel
      */
-    public void resizeScale (double scaleFactor, JPanel panel) {
+    public void resize (JPanel panel) {
         // calculate new width and height
-        int w = (int)Math.ceil(image.getWidth() * scaleFactor);
-        int h = (int)Math.ceil(image.getHeight() * scaleFactor);
+        int w = (int)Math.ceil(image.getWidth() * pixelSize);
+        int h = (int)Math.ceil(image.getHeight() * pixelSize);
 
         // create new bufferedimage object with new dimensions
         BufferedImage resizedImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
 
-        // draw resized image
-        Graphics2D graphics2D = resizedImage.createGraphics();
-        graphics2D.drawImage(image, 0, 0, w, h, null);
-        graphics2D.dispose();
-        image = resizedImage;
-
         // redraw image pixel by pixel
-        // drawPixelByPixel(graphics2D);
-        // graphics2D.dispose();
+        Graphics2D graphics2D = resizedImage.createGraphics();
+        drawPixelByPixel(graphics2D);
+        graphics2D.dispose();
         // image = resizedImage;
 
         // place resized image in new jlabel and replace old
@@ -122,10 +127,10 @@ public class ImageZoom {
     }
 
     /**
-     * Draw an image one pixel area at a time on a given graphic. Pixel area refers to the space an original pixel should cover.
+     * Draw an image one pixel area at a time on a given graphic. This does not draw over the original image. Pixel area refers to the space an original pixel should cover.
      * @param g
      */
-    public void drawPixelByPixel(Graphics g) {
+    public void drawPixelByPixel(Graphics2D g) {
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) { 
                 // get the RGB color from space of original pixel
@@ -136,9 +141,52 @@ public class ImageZoom {
 
                 // fill resized pixel with color
                 g.setColor(new Color(red, green, blue));
-                g.fillRect(x, y, pixelSize+1, pixelSize+1);
+                g.fillRect(x*pixelSize, y*pixelSize, pixelSize, pixelSize);
             }
         }
+    }
+
+    /**
+     * Replace all pixel areas visible with images that match the pixel's color. Color is matched up to a certain tolerance value. The displayed collage is a single graphic.
+     * @param panel
+     * @throws Exception
+     */
+    public void replacePixelsWithImages(JPanel panel) throws Exception {
+
+        // create new bufferedimage object with new dimensions
+        BufferedImage collage = new BufferedImage(image.getWidth()*pixelSize, image.getHeight()*pixelSize, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = collage.createGraphics();
+        
+        // replace each pixel area with new image
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int pixelColor = image.getRGB(x, y);
+                BufferedImage bestMatch = null;
+
+                File directory = new File("C:/Users/baihu/git/mqp/infinite-photo-collage/src/images");
+                File[] dirFiles = directory.listFiles();
+                if (dirFiles != null) {
+                    for (File f : dirFiles) {
+                        BufferedImage curr_img = ImageIO.read(f);
+                        int imgColor = getAverageColor(curr_img, false).getRGB();
+
+                        if (imgColor > pixelColor-COLOR_TOLERANCE && imgColor < pixelColor+COLOR_TOLERANCE) {
+                            bestMatch = curr_img;
+                        }
+                    }
+                    g2d.drawImage(bestMatch, x*pixelSize, y*pixelSize, pixelSize, pixelSize, null);
+                }
+
+            }
+        }
+        g2d.dispose();
+
+        // place collage in new jlabel and replace old
+        label = new JLabel( new ImageIcon(collage) );
+        panel.removeAll();
+        panel.add(label, BorderLayout.CENTER);
+        panel.repaint();
+        panel.validate();
     }
 
     /**
@@ -154,20 +202,20 @@ public class ImageZoom {
         int numPixels = 0;
         int startX = 0;
         int startY = 0;
-        int endX = image.getWidth();
-        int endY = image.getHeight();
+        int endX = img.getWidth();
+        int endY = img.getHeight();
 
         if (!includeEdges) {
-            startX = (int)(EDGE_TOLERANCE * image.getWidth());
-            startY = (int)(EDGE_TOLERANCE * image.getHeight());
-            endX = (int)(image.getWidth() - (EDGE_TOLERANCE * image.getWidth()));
-            endY = (int)(image.getHeight() - (EDGE_TOLERANCE * image.getHeight()));
+            startX = (int)(EDGE_TOLERANCE * img.getWidth());
+            startY = (int)(EDGE_TOLERANCE * img.getHeight());
+            endX = (int)(img.getWidth() - (EDGE_TOLERANCE * img.getWidth()));
+            endY = (int)(img.getHeight() - (EDGE_TOLERANCE * img.getHeight()));
         }
         
         // from every pixel, get the total R,G,B values
         for (int y = startY; y < endY; y++) {
             for (int x = startX; x < endX; x++) {
-                int color = image.getRGB(x, y);
+                int color = img.getRGB(x, y);
                 red += (color & 0x00ff0000) >> 16;
                 green += (color & 0x0000ff00) >> 8;
                 blue += color & 0x000000ff;
@@ -180,10 +228,10 @@ public class ImageZoom {
 
         // https://community.oracle.com/tech/developers/discussion/1206435/convert-java-awt-color-to-hex-string
         // print out RGB and hex code of color
-        String r = Integer.toHexString(averageColor.getRed());
-        String g = Integer.toHexString(averageColor.getGreen());
-        String b = Integer.toHexString(averageColor.getBlue());
-        System.out.printf("average color: #%s%s%s, %s", r, g, b, averageColor);
+        // String r = Integer.toHexString(averageColor.getRed());
+        // String g = Integer.toHexString(averageColor.getGreen());
+        // String b = Integer.toHexString(averageColor.getBlue());
+        // System.out.printf("average color: #%s%s%s, %s\n", r, g, b, averageColor);
 
         return averageColor;
     }
