@@ -163,7 +163,7 @@ public class ImageZoom {
                 int pixelColor = image.getRGB(x, y);
                 BufferedImage bestMatch = null;
 
-                File directory = new File("C:/Users/baihu/git/mqp/infinite-photo-collage/src/images");
+                File directory = new File("images");
                 File[] dirFiles = directory.listFiles();
                 if (dirFiles != null) {
                     for (File f : dirFiles) {
