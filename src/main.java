@@ -1,7 +1,6 @@
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-import javafx.scene.input.ZoomEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 

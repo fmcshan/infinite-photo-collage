@@ -6,7 +6,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 
-import javafx.scene.image.PixelFormat.Type;
+//import javafx.scene.image.PixelFormat.Type;
 
 import javax.swing.JPanel;
 import java.awt.event.MouseWheelListener;
@@ -17,6 +17,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ImageZoom {
 
@@ -28,6 +30,7 @@ public class ImageZoom {
     private JLabel label = null;
     private BufferedImage image = null;
     private int pixelSize = 1;  // side length of 1 pixel in original image
+    private Map<Integer, String> averageColors;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
@@ -41,7 +44,24 @@ public class ImageZoom {
             }
         });
     }
+
+    public Map<Integer, String> calculateAverageColors() throws IOException {
+        Map<Integer, String> map = new HashMap<>();
+
+        File directory = new File("images");
+        File[] dirFiles = directory.listFiles();
+        if (dirFiles != null) {
+            for (File f : dirFiles) {
+                BufferedImage curr_img = ImageIO.read(f);
+                int imgColor = getAverageColor(curr_img, false).getRGB();
+                map.put(imgColor, f.getPath());
+            }
+        }
+        return map;
+    }
+
     public ImageZoom() throws Exception {
+        averageColors = calculateAverageColors();
         initialize();
     }
 
@@ -101,7 +121,6 @@ public class ImageZoom {
 
     /**
      * Rescale and display image, which replaces current image
-     * @param scaleFactor
      * @param panel
      */
     public void resize (JPanel panel) {
@@ -161,22 +180,16 @@ public class ImageZoom {
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
                 int pixelColor = image.getRGB(x, y);
-                BufferedImage bestMatch = null;
+                String bestMatch = "";
 
-                File directory = new File("images");
-                File[] dirFiles = directory.listFiles();
-                if (dirFiles != null) {
-                    for (File f : dirFiles) {
-                        BufferedImage curr_img = ImageIO.read(f);
-                        int imgColor = getAverageColor(curr_img, false).getRGB();
-
-                        if (imgColor > pixelColor-COLOR_TOLERANCE && imgColor < pixelColor+COLOR_TOLERANCE) {
-                            bestMatch = curr_img;
-                        }
+                for (Integer imgColor: averageColors.keySet()) {
+                    if (imgColor > pixelColor - COLOR_TOLERANCE && imgColor < pixelColor + COLOR_TOLERANCE) {
+                        bestMatch = averageColors.get(imgColor);
                     }
-                    g2d.drawImage(bestMatch, x*pixelSize, y*pixelSize, pixelSize, pixelSize, null);
                 }
 
+                BufferedImage img = ImageIO.read(new File(bestMatch));
+                g2d.drawImage(img, x * pixelSize, y * pixelSize, pixelSize, pixelSize, null);
             }
         }
         g2d.dispose();
