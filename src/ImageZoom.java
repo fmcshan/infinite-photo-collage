@@ -5,16 +5,12 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
-
-//import javafx.scene.image.PixelFormat.Type;
-
 import javax.swing.JPanel;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
@@ -23,9 +19,9 @@ import java.util.Map;
 public class ImageZoom {
 
     public static final int SCALE_DEFAULT = 1; // 
-    double EDGE_TOLERANCE = 0.3; // percent of image width/height to ignore around edges when color matching
-    int COLOR_TOLERANCE = 707070; // tolerance for matching colors
-    int MAX_ZOOM = 50; // max side length of 1 original pixel before image replacement
+    double EDGE_TOLERANCE = 0.4; // percent of image width/height to ignore around edges when color matching
+    int COLOR_TOLERANCE = Integer.MAX_VALUE; // tolerance for matching colors
+    int MAX_ZOOM = 25; // max side length of 1 original pixel before image replacement
     private JFrame frmImageZoomIn;
     private JLabel label = null;
     private BufferedImage image = null;
@@ -75,10 +71,10 @@ public class ImageZoom {
         JScrollPane scrollPane = new JScrollPane();
         frmImageZoomIn.getContentPane().add(scrollPane, BorderLayout.CENTER);
 
-        // prompt for image file name
-        System.out.println("Enter an image file name:");
+        // prompt for user inputs
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        String filename = br.readLine();
+        System.out.println("Enter an image file name:");
+        String filename = br.readLine();        
         try {
             image = ImageIO.read(new File(filename));
         } catch (IOException e) {
@@ -98,7 +94,6 @@ public class ImageZoom {
         panel.addMouseWheelListener(new MouseWheelListener() {
             public void mouseWheelMoved(MouseWheelEvent e) {
                 int notches = e.getWheelRotation();
-                // System.out.printf("notches: %d\n", notches);
                 if (notches > 0) {
                     if (pixelSize < MAX_ZOOM) {
                         int temp = (int)((notches*SCALE_DEFAULT) + 1);
@@ -180,15 +175,27 @@ public class ImageZoom {
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
                 int pixelColor = image.getRGB(x, y);
-                String bestMatch = "";
+                BufferedImage img = null;
+                String bestMatchFilename = "";
+                int smallestDiff = COLOR_TOLERANCE;
 
                 for (Integer imgColor: averageColors.keySet()) {
-                    if (imgColor > pixelColor - COLOR_TOLERANCE && imgColor < pixelColor + COLOR_TOLERANCE) {
-                        bestMatch = averageColors.get(imgColor);
+                    // old method
+                    // if (imgColor > pixelColor - COLOR_TOLERANCE && imgColor < pixelColor + COLOR_TOLERANCE) {
+                    //     bestMatch = averageColors.get(imgColor);
+                    // }
+                    int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
+                    if (diff < smallestDiff) {
+                        smallestDiff = diff;
+                        bestMatchFilename = averageColors.get(imgColor);
                     }
                 }
 
-                BufferedImage img = ImageIO.read(new File(bestMatch));
+                try {
+                    img = ImageIO.read(new File(bestMatchFilename));
+                } catch (IOException err) {
+                    // System.out.println(err);
+                }
                 g2d.drawImage(img, x * pixelSize, y * pixelSize, pixelSize, pixelSize, null);
             }
         }
@@ -247,6 +254,19 @@ public class ImageZoom {
         // System.out.printf("average color: #%s%s%s, %s\n", r, g, b, averageColor);
 
         return averageColor;
+    }
+
+    /**
+     * Calculate the total difference for each color chanel (R, G, B) between two Colors
+     * @param pixelColor
+     * @param colorToCompare
+     * @return color difference
+     */
+    public int calculateColorDifference(Color pixelColor, Color colorToCompare) {
+        int deltaRed = Math.abs(pixelColor.getRed() - colorToCompare.getRed());
+        int deltaGreen = Math.abs(pixelColor.getGreen() - colorToCompare.getGreen());
+        int deltaBlue = Math.abs(pixelColor.getBlue() - colorToCompare.getBlue());
+        return (deltaRed + deltaGreen + deltaBlue);
     }
 
 }

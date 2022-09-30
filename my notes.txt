@@ -1,0 +1,16 @@
+Initialization:
+* for all files in "images" folder, calc average color then map as <avgColor,localpath>
+
+Zooming method (level 0):
+* original image stored (BufferedImage) and referenced for pixel colors
+* image object does not get replaced by repainted panel
+* resized image gets rendered pixel by pixel with new side length
+* after some pixel length threshold is passed, the visible pixel areas get replaced by new images
+
+Replacing pixel area(s) with images:
+* 
+* replacement threshold will prob not match resolution of new images
+  - if resolution > threshold, should not render pixel by pixel
+  - if resolution < threshold, try to render pixel by pixel to next closest size (round up)
+* storing set of images in collage
+  - 2d array of filenames, image objs, or something else?
