@@ -36,6 +36,7 @@ public class ImageZoom {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
+//                    ImageLoader.loadImages();
                     ImageZoom window = new ImageZoom();
                     window.frmImageZoomIn.setVisible(true);
                 } catch (Exception e) {
@@ -48,7 +49,7 @@ public class ImageZoom {
     public Map<Integer, String> calculateAverageColors() throws IOException {
         Map<Integer, String> map = new HashMap<>();
 
-        File directory = new File("images");
+        File directory = new File("images/flower");
         File[] dirFiles = directory.listFiles();
         if (dirFiles != null) {
             for (File f : dirFiles) {
