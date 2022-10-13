@@ -9,7 +9,7 @@ public class ImageLoader {
      * @throws IOException
      */
     public static void loadImages() throws IOException {
-        File directory = new File("images");
+        File directory = new File("images/experiment-images");
         File[] dirFiles = directory.listFiles();
         int numberOfTrials = 10;
         if (dirFiles != null) {
