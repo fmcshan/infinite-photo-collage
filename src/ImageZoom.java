@@ -5,6 +5,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.plaf.FontUIResource;
 import javax.swing.JPanel;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseWheelEvent;
@@ -90,6 +92,9 @@ public class ImageZoom {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
 
+        // add info menu
+        panel.add(displayInfoMenu());
+
         // display image as icon
         Icon imageIcon = new ImageIcon(filename);
         label = new JLabel( imageIcon );
@@ -103,7 +108,7 @@ public class ImageZoom {
                     if (pixelSize < MAX_ZOOM) {
                         pixelSize = pixelSize + 1;
                         resize(panel);
-                        System.out.printf("pixelSize: %d\n", pixelSize);
+                        // System.out.printf("pixelSize: %d\n", pixelSize);
                     } else {
                         System.out.printf("zoom maxed out\n");
                         try {
@@ -141,6 +146,7 @@ public class ImageZoom {
         // place resized image in new jlabel and replace old
         label = new JLabel( new ImageIcon(resizedImage) );
         panel.removeAll();
+        panel.add(displayInfoMenu());
         panel.add(label, BorderLayout.CENTER);
         panel.repaint();
         panel.validate();
@@ -230,6 +236,7 @@ public class ImageZoom {
         // place collage in new jlabel and replace old
         label = new JLabel( new ImageIcon(collage) );
         panel.removeAll();
+        panel.add(displayInfoMenu());
         panel.add(label, BorderLayout.CENTER);
         panel.repaint();
         panel.validate();
@@ -311,6 +318,26 @@ public class ImageZoom {
         int deltaGreen = Math.abs(pixelColor.getGreen() - colorToCompare.getGreen());
         int deltaBlue = Math.abs(pixelColor.getBlue() - colorToCompare.getBlue());
         return (deltaRed + deltaGreen + deltaBlue);
+    }
+
+    public JTextArea displayInfoMenu() {
+        JTextArea info = new JTextArea();
+
+        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + "\n";
+        String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + "\n";
+        String overallSize = "Total side length: " + Integer.toString(image.getWidth() * pixelSize) + "\n";
+        String stats = maxLevel + pixelSizing + overallSize;
+
+        Font font = new FontUIResource(Font.MONOSPACED, Font.BOLD, 16);
+        info.setFont(font);
+
+        info.setText(stats);
+        info.setEditable(false);
+        info.setBackground(new Color(255,255,255,200));
+        info.setBounds(5, 5, 240, 120);
+
+    
+        return info;
     }
 
 }
