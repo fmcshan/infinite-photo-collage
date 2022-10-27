@@ -10,7 +10,6 @@ import javax.swing.plaf.FontUIResource;
 import javax.swing.JPanel;
 import java.awt.event.MouseWheelListener;
 import java.awt.event.MouseWheelEvent;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -33,12 +32,12 @@ public class ImageZoom {
     private Map<Integer, String> averageColors;
     private ArrayList<String> files = new ArrayList<>();
     private boolean replaced = false;
+    private int numZooms = 0;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
-//                    ImageLoader.loadImages();
                     ImageZoom window = new ImageZoom();
                     window.frmImageZoomIn.setVisible(true);
                 } catch (Exception e) {
@@ -47,11 +46,20 @@ public class ImageZoom {
             }
         });
     }
+    
+    public ImageZoom() throws Exception {
+        averageColors = calculateAverageColors();
+        initialize();
+    }
 
+    /**
+     * Calculate average color of every image in dataset. Map color to name of image file.
+     * @return
+     * @throws IOException
+     */
     public Map<Integer, String> calculateAverageColors() throws IOException {
         Map<Integer, String> map = new HashMap<>();
-
-        File directory = new File("images/flower");
+        File directory = new File("images");
         File[] dirFiles = directory.listFiles();
         if (dirFiles != null) {
             for (File f : dirFiles) {
@@ -63,12 +71,8 @@ public class ImageZoom {
         return map;
     }
 
-    public ImageZoom() throws Exception {
-        averageColors = calculateAverageColors();
-        initialize();
-    }
-
     private void initialize() throws Exception {
+        // create window
         frmImageZoomIn = new JFrame();
         frmImageZoomIn.setTitle("Infinite Photo Collage");
         frmImageZoomIn.setBounds(100, 100, 450, 300);
@@ -108,7 +112,6 @@ public class ImageZoom {
                     if (pixelSize < MAX_ZOOM) {
                         pixelSize = pixelSize + 1;
                         resize(panel);
-                        // System.out.printf("pixelSize: %d\n", pixelSize);
                     } else {
                         System.out.printf("zoom maxed out\n");
                         try {
@@ -141,7 +144,6 @@ public class ImageZoom {
         Graphics2D graphics2D = resizedImage.createGraphics();
         drawPixelByPixel(graphics2D);
         graphics2D.dispose();
-        // image = resizedImage;
 
         // place resized image in new jlabel and replace old
         label = new JLabel( new ImageIcon(resizedImage) );
@@ -178,14 +180,18 @@ public class ImageZoom {
      * @throws Exception
      */
     public void replacePixelsWithImages(JPanel panel) throws Exception {
+        // memory saver: after 1 zoom level, only use "center" images to create the next collage.
         if (replaced) {
             int lengthInImages = (int) Math.sqrt(files.size());
-            BufferedImage innerCollage = new BufferedImage(files.size() * pixelSize, files.size() * pixelSize, BufferedImage.TYPE_INT_RGB);
+            BufferedImage innerCollage = new BufferedImage(lengthInImages * pixelSize, lengthInImages * pixelSize, BufferedImage.TYPE_INT_RGB);
             Graphics2D g2d = innerCollage.createGraphics();
+            int var = 0;
             for (int i = 0; i < lengthInImages; i++) {
                 for (int j = 0; j < lengthInImages; j++) {
-                    String file = files.get(i);
-                    g2d.drawImage(ImageIO.read(new File(file)), i, j, lengthInImages*pixelSize, lengthInImages*pixelSize, null);
+                    String file = files.get(var);
+                    // System.out.println( files.get(var));
+                    g2d.drawImage(ImageIO.read(new File(file)), i*pixelSize, j*MAX_ZOOM, pixelSize, pixelSize, null);
+                    var++;
                 }
             }
             g2d.dispose();
@@ -194,6 +200,7 @@ public class ImageZoom {
         }
 
         // create new bufferedimage object with new dimensions
+        numZooms++;
         BufferedImage collage = new BufferedImage(image.getWidth()*pixelSize, image.getHeight()*pixelSize, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = collage.createGraphics();
         
@@ -205,11 +212,8 @@ public class ImageZoom {
                 String bestMatchFilename = "";
                 int smallestDiff = COLOR_TOLERANCE;
 
+                // search through map for closest color match
                 for (Integer imgColor: averageColors.keySet()) {
-                    // old method
-                    // if (imgColor > pixelColor - COLOR_TOLERANCE && imgColor < pixelColor + COLOR_TOLERANCE) {
-                    //     bestMatch = averageColors.get(imgColor);
-                    // }
                     int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
                     if (diff < smallestDiff) {
                         smallestDiff = diff;
@@ -223,14 +227,17 @@ public class ImageZoom {
                     // System.out.println(err);
                 }
 
-                if (x <= (image.getWidth() / 2) + 1 && x >= (image.getWidth() / 2) - 1
-                        && y <= (image.getHeight() / 2) + 1 && y >= (image.getHeight() / 2) - 1) {
+                // calculate coordinates of center images. units are image areas not pixels
+                if (x <= (image.getWidth() / 2)+1 && x >= (image.getWidth() / 2) - 2
+                        && y <= (image.getHeight() / 2)+1 && y >= (image.getHeight() / 2) - 2) {
                     files.add(bestMatchFilename);
+                    // System.out.printf("%d,%d\n", x, y);
                 }
 
                 g2d.drawImage(img, x * pixelSize, y * pixelSize, pixelSize, pixelSize, null);
             }
         }
+        System.out.printf("files: %s\n", files.toString());
         g2d.dispose();
 
         // place collage in new jlabel and replace old
@@ -241,19 +248,6 @@ public class ImageZoom {
         panel.repaint();
         panel.validate();
         image = collage;
-    }
-
-    public Image scale(BufferedImage img) {
-        Image scaledImg = null;
-        if (img != null) {
-            scaledImg = img.getScaledInstance(1, 1, Image.SCALE_DEFAULT);
-//            scaledImg = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
-//            Graphics2D g = scaledImg.createGraphics();
-//            AffineTransform at = AffineTransform.getScaleInstance(1 / img.getWidth(), 1 / img.getHeight());
-//            g.drawImage(img, 0, 0, 1, 1, null);
-//            g.dispose();
-        }
-        return scaledImg;
     }
 
     /**
@@ -279,9 +273,6 @@ public class ImageZoom {
             endY = (int)(img.getHeight() - (EDGE_TOLERANCE * img.getHeight()));
         }
 
-//        Image scaledImg = scale(img);
-//        System.out.println(((BufferedImage) scaledImg).getRGB(0, 0));
-        
         // from every pixel, get the total R,G,B values
         for (int y = startY; y < endY; y++) {
             for (int x = startX; x < endX; x++) {
@@ -295,15 +286,6 @@ public class ImageZoom {
 
         // resulting average color
         Color averageColor = new Color(red/numPixels, green/numPixels, blue/numPixels);
-//        System.out.println("original: " + averageColor.getRGB());
-
-        // https://community.oracle.com/tech/developers/discussion/1206435/convert-java-awt-color-to-hex-string
-        // print out RGB and hex code of color
-        // String r = Integer.toHexString(averageColor.getRed());
-        // String g = Integer.toHexString(averageColor.getGreen());
-        // String b = Integer.toHexString(averageColor.getBlue());
-        // System.out.printf("average color: #%s%s%s, %s\n", r, g, b, averageColor);
-
         return averageColor;
     }
 
@@ -320,22 +302,27 @@ public class ImageZoom {
         return (deltaRed + deltaGreen + deltaBlue);
     }
 
+    /**
+     * Create display of current info about collage
+     * @return
+     */
     public JTextArea displayInfoMenu() {
         JTextArea info = new JTextArea();
 
-        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + "\n";
-        String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + "\n";
-        String overallSize = "Total side length: " + Integer.toString(image.getWidth() * pixelSize) + "\n";
-        String stats = maxLevel + pixelSizing + overallSize;
+        // text being displayed
+        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + " px\n";
+        String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + " px\n";
+        String overallSize = "Total side length: " + Integer.toString(image.getWidth() * pixelSize) + " px\n";
+        String zooms = "Collage replacements: " + Integer.toString(numZooms) + "\n";
+        String stats = maxLevel + pixelSizing + overallSize + zooms;
 
+        // set styling
         Font font = new FontUIResource(Font.MONOSPACED, Font.BOLD, 16);
         info.setFont(font);
-
         info.setText(stats);
         info.setEditable(false);
         info.setBackground(new Color(255,255,255,200));
-        info.setBounds(5, 5, 240, 120);
-
+        info.setBounds(5, 5, 280, 120);
     
         return info;
     }
