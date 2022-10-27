@@ -113,7 +113,7 @@ public class ImageZoom {
                         pixelSize = pixelSize + 1;
                         resize(panel);
                     } else {
-                        System.out.printf("zoom maxed out\n");
+                        // System.out.printf("zoom maxed out\n");
                         try {
                             replacePixelsWithImages(panel);
                             replaced = true;
@@ -190,7 +190,7 @@ public class ImageZoom {
                 for (int j = 0; j < lengthInImages; j++) {
                     String file = files.get(var);
                     // System.out.println( files.get(var));
-                    g2d.drawImage(ImageIO.read(new File(file)), i*pixelSize, j*MAX_ZOOM, pixelSize, pixelSize, null);
+                    g2d.drawImage(ImageIO.read(new File(file)), i*pixelSize, j*pixelSize, pixelSize, pixelSize, null);
                     var++;
                 }
             }
@@ -205,8 +205,8 @@ public class ImageZoom {
         Graphics2D g2d = collage.createGraphics();
         
         // replace each pixel area with new image
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
+        for (int x = 0; x < image.getHeight(); x++) {
+            for (int y = 0; y < image.getWidth(); y++) {
                 int pixelColor = image.getRGB(x, y);
                 BufferedImage img = null;
                 String bestMatchFilename = "";
@@ -228,8 +228,8 @@ public class ImageZoom {
                 }
 
                 // calculate coordinates of center images. units are image areas not pixels
-                if (x <= (image.getWidth() / 2)+1 && x >= (image.getWidth() / 2) - 2
-                        && y <= (image.getHeight() / 2)+1 && y >= (image.getHeight() / 2) - 2) {
+                if (x <= (image.getWidth() / 2)+2 && x >= (image.getWidth() / 2) - 3
+                        && y <= (image.getHeight() / 2)+2 && y >= (image.getHeight() / 2) - 3) {
                     files.add(bestMatchFilename);
                     // System.out.printf("%d,%d\n", x, y);
                 }
@@ -237,7 +237,7 @@ public class ImageZoom {
                 g2d.drawImage(img, x * pixelSize, y * pixelSize, pixelSize, pixelSize, null);
             }
         }
-        System.out.printf("files: %s\n", files.toString());
+        // System.out.printf("files: %s\n", files.toString());
         g2d.dispose();
 
         // place collage in new jlabel and replace old
