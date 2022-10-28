@@ -33,6 +33,8 @@ public class ImageZoom {
     private ArrayList<String> files = new ArrayList<>();
     private boolean replaced = false;
     private int numZooms = 0;
+    // private int imageSideLength;
+    // private double ZOOM_INCR_PERCENT = 0.1;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
@@ -79,7 +81,7 @@ public class ImageZoom {
         frmImageZoomIn.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         // add scrolling ability
-        JScrollPane scrollPane = new JScrollPane();
+        JScrollPane scrollPane = new JScrollPane(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         frmImageZoomIn.getContentPane().add(scrollPane, BorderLayout.CENTER);
 
         // prompt for user inputs
@@ -88,12 +90,15 @@ public class ImageZoom {
         String filename = br.readLine();        
         try {
             image = ImageIO.read(new File(filename));
+            files.add(filename);
+            // imageSideLength = image.getWidth();
         } catch (IOException e) {
             System.out.println(e);
         }
         getAverageColor(image, false);
 
         JPanel panel = new JPanel();
+        scrollPane.setViewportView(panel);
         panel.setLayout(new BorderLayout());
 
         // add info menu
@@ -111,7 +116,11 @@ public class ImageZoom {
                 if (notches > 0) {
                     if (pixelSize < MAX_ZOOM) {
                         pixelSize = pixelSize + 1;
-                        resize(panel);
+                        try {
+                            resize(panel);
+                        } catch (Exception e1) {
+                            e1.printStackTrace();
+                        }
                     } else {
                         // System.out.printf("zoom maxed out\n");
                         try {
@@ -132,17 +141,22 @@ public class ImageZoom {
      * Rescale and display image, which replaces current image
      * @param panel
      */
-    public void resize (JPanel panel) {
+    public void resize (JPanel panel) throws Exception {
         // calculate new width and height
         int w = (int)Math.ceil(image.getWidth() * pixelSize);
         int h = (int)Math.ceil(image.getHeight() * pixelSize);
+
+        // int newSideLength = (int)(imageSideLength * (1 + ZOOM_INCR_PERCENT));
+        // imageSideLength = newSideLength;
 
         // create new bufferedimage object with new dimensions
         BufferedImage resizedImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
 
         // redraw image pixel by pixel
         Graphics2D graphics2D = resizedImage.createGraphics();
-        drawPixelByPixel(graphics2D);
+        // drawPixelByPixel(graphics2D);
+        graphics2D.drawImage(image, 0, 0, w, h, null);
+        // drawImageByImage(graphics2D);
         graphics2D.dispose();
 
         // place resized image in new jlabel and replace old
@@ -150,8 +164,8 @@ public class ImageZoom {
         panel.removeAll();
         panel.add(displayInfoMenu());
         panel.add(label, BorderLayout.CENTER);
+        panel.revalidate();
         panel.repaint();
-        panel.validate();
     }
 
     /**
@@ -170,6 +184,21 @@ public class ImageZoom {
                 // fill resized pixel with color
                 g.setColor(new Color(red, green, blue));
                 g.fillRect(x*pixelSize, y*pixelSize, pixelSize, pixelSize);
+            }
+        }
+    }
+
+    /**
+     * Draw collage image by image
+     */
+    public void drawImageByImage(Graphics2D g2d) throws Exception {
+        int lengthInImages = (int) Math.sqrt(files.size());
+        for (int x = 0; x < lengthInImages; x++) {
+            for (int y = 0; y < lengthInImages; y++) {
+                for (String file : files) {
+                    // fix
+                    // g2d.drawImage(ImageIO.read(new File(file)), x*imageSideLength, y*imageSideLength, imageSideLength, imageSideLength, null);
+                }
             }
         }
     }
@@ -228,8 +257,8 @@ public class ImageZoom {
                 }
 
                 // calculate coordinates of center images. units are image areas not pixels
-                if (x <= (image.getWidth() / 2)+2 && x >= (image.getWidth() / 2) - 3
-                        && y <= (image.getHeight() / 2)+2 && y >= (image.getHeight() / 2) - 3) {
+                if (x <= (image.getWidth() / 2) + 1 && x >= (image.getWidth() / 2) - 2
+                        && y <= (image.getHeight() / 2) + 1 && y >= (image.getHeight() / 2) - 2) {
                     files.add(bestMatchFilename);
                     // System.out.printf("%d,%d\n", x, y);
                 }
@@ -245,8 +274,8 @@ public class ImageZoom {
         panel.removeAll();
         panel.add(displayInfoMenu());
         panel.add(label, BorderLayout.CENTER);
+        panel.revalidate();
         panel.repaint();
-        panel.validate();
         image = collage;
     }
 
