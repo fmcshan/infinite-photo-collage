@@ -24,7 +24,7 @@ public class ImageZoom {
     public static final int SCALE_DEFAULT = 1; // 
     double EDGE_TOLERANCE = 0.4; // percent of image width/height to ignore around edges when color matching
     int COLOR_TOLERANCE = Integer.MAX_VALUE; // tolerance for matching colors
-    int MAX_ZOOM = 20; // max side length 1 image tile
+    int MAX_ZOOM = 250; // max side length 1 image tile
     int INIT_MAX_ZOOM = 10; // max side length of 1 original pixel before image replacement
     private JFrame frmImageZoomIn;
     private JLabel label = null;
@@ -218,17 +218,19 @@ public class ImageZoom {
      */
     public void drawImageByImage(Graphics2D g2d) throws Exception {
         int lengthInImages = (int) Math.sqrt(files.size());
+        int index = 0;
         for (int x = 0; x < lengthInImages; x++) {
             for (int y = 0; y < lengthInImages; y++) {
-                for (String file : files) {
-                    // fix
-                    g2d.drawImage(ImageIO.read(new File(file)), x*imageSideLength, y*imageSideLength, imageSideLength, imageSideLength, null);
-                }
+                // fix
+                g2d.drawImage(ImageIO.read(new File(files.get(index))), x*imageSideLength, y*imageSideLength, imageSideLength, imageSideLength, null);
+                index++;
             }
         }
     }
 
     public void initialReplacement(JPanel panel) throws Exception {
+        numZooms++;
+        files = new ArrayList<>();
         int lengthInImages = image.getWidth();
         imageSideLength = (int) Math.ceil((double)imageSideLength / (double)lengthInImages);
         int totalSideLength = lengthInImages * imageSideLength;
@@ -254,6 +256,7 @@ public class ImageZoom {
 
                 try {
                     g2d.drawImage(ImageIO.read(new File(bestMatchFilename)), x * imageSideLength, y * imageSideLength, imageSideLength, imageSideLength, null);
+                    files.add(bestMatchFilename);
                 } catch (IOException err) {
                     System.out.println(err);
                 }
@@ -283,32 +286,32 @@ public class ImageZoom {
         BufferedImage collage = null;
 
         // memory saver: after 1 zoom level, only use "center" images to create the next collage.
-        if (replaced) {
-            int lengthInImages = (int) Math.sqrt(files.size());
-             collage = new BufferedImage(lengthInImages * imageSideLength, lengthInImages * imageSideLength, BufferedImage.TYPE_INT_RGB);
-            Graphics2D g2d = collage.createGraphics();
-            int var = 0;
-            for (int i = 0; i < lengthInImages; i++) {
-                for (int j = 0; j < lengthInImages; j++) {
-                    String file = files.get(var);
-                    g2d.drawImage(ImageIO.read(new File(file)), i*imageSideLength, j*imageSideLength, imageSideLength, imageSideLength, null);
-                    var++;
-                }
-            }
-            g2d.dispose();
-            image = collage;
-            files = new ArrayList<>();
-        } else {
-            
-        }
-        // create new bufferedimage object with new dimensions
-        collage = new BufferedImage(image.getWidth() * imageSideLength, image.getHeight() * imageSideLength, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = collage.createGraphics();
+        // calculate coordinates of center images. units are image areas not pixels
+        int centerFile = files.size() / 2;
+        files.subList(centerFile + 9, files.size()).clear();
+        files.subList(0, centerFile - 7).clear();
 
-        
+        // draw cropped collage
+        int lengthInImages = (int) Math.sqrt(files.size());
+        collage = new BufferedImage(lengthInImages * imageSideLength, lengthInImages * imageSideLength, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = collage.createGraphics();
+        int var = 0;
+        for (int i = 0; i < lengthInImages; i++) {
+            for (int j = 0; j < lengthInImages; j++) {
+                String file = files.get(var);
+                g2d.drawImage(ImageIO.read(new File(file)), i*imageSideLength, j*imageSideLength, imageSideLength, imageSideLength, null);
+                var++;
+            }
+        }
+        g2d.dispose();
+        image = collage;
+        files = new ArrayList<>();
+
+        imageSideLength = 5;
+
         // replace each pixel area with new image
-        for (int x = 0; x < image.getHeight(); x++) {
-            for (int y = 0; y < image.getWidth(); y++) {
+        for (int x = 0; x < image.getHeight(); x += 5) {
+            for (int y = 0; y < image.getWidth(); y += 5) {
                 int pixelColor = image.getRGB(x, y);
                 BufferedImage img = null;
                 String bestMatchFilename = "";
@@ -325,20 +328,15 @@ public class ImageZoom {
 
                 try {
                     img = ImageIO.read(new File(bestMatchFilename));
+                    files.add(bestMatchFilename);
                 } catch (IOException err) {
                     // System.out.println(err);
                 }
 
-                // calculate coordinates of center images. units are image areas not pixels
-                if (x <= (image.getWidth() / 2) + 1 && x >= (image.getWidth() / 2) - 2
-                        && y <= (image.getHeight() / 2) + 1 && y >= (image.getHeight() / 2) - 2) {
-                    files.add(bestMatchFilename);
-                    // System.out.printf("%d,%d\n", x, y);
-                }
-
-                g2d.drawImage(img, x * imageSideLength, y * imageSideLength, imageSideLength, imageSideLength, null);
+//                g2d.drawImage(img, x * imageSideLength, y * imageSideLength, imageSideLength, imageSideLength, null);
             }
         }
+        drawImageByImage(g2d);
         // System.out.printf("files: %s\n", files.toString());
         g2d.dispose();
 
@@ -413,12 +411,12 @@ public class ImageZoom {
         int lengthInImages = (int) Math.sqrt(files.size());
 
         // text being displayed
-        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + " px\n";
-        String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + " px\n";
-        // String overallSize = "Total side length: " + Integer.toString(imageSideLength * lengthInImages) + " px\n";
+//        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + " px\n";
+//        String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + " px\n";
+        String overallSize = "Total side length: " + Integer.toString(imageSideLength * lengthInImages) + " px\n";
         String imageLength = "Image side length: " + Integer.toString(imageSideLength) + " px\n";
         String zooms = "Collage replacements: " + Integer.toString(numZooms) + "\n";
-        String stats = maxLevel + pixelSizing + imageLength + zooms;
+        String stats = overallSize + imageLength + zooms;
 
         // set styling
         Font font = new FontUIResource(Font.MONOSPACED, Font.BOLD, 16);
