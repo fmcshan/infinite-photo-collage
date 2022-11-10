@@ -1,15 +1,8 @@
 import java.awt.*;
 import javax.imageio.ImageIO;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
+import javax.swing.*;
 import javax.swing.plaf.FontUIResource;
-import javax.swing.JPanel;
-import java.awt.event.MouseWheelListener;
-import java.awt.event.MouseWheelEvent;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,6 +11,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class ImageZoom {
 
@@ -36,6 +30,7 @@ public class ImageZoom {
     private int numZooms = 0;
     private int imageSideLength;
     private double ZOOM_INCR_PERCENT = 0.5;
+    private JToggleButton toggleButton;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
@@ -105,62 +100,89 @@ public class ImageZoom {
         // add info menu
         panel.add(displayInfoMenu(panel));
 
+        initializeToggle(panel);
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
+
         // display image as icon
         Icon imageIcon = new ImageIcon(filename);
         label = new JLabel( imageIcon );
         panel.add(label, BorderLayout.CENTER);
+
+        panel.setFocusable(true);
+        panel.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                char c = e.getKeyChar();
+                if (c == ' ') {
+                    zoom(panel);
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+
+            }
+        });
 
         // add zoom ability. can only zoom in 
         panel.addMouseWheelListener(new MouseWheelListener() {
             public void mouseWheelMoved(MouseWheelEvent e) {
                 int notches = e.getWheelRotation();
                 if (notches > 0) {
-                    
-                    if (!replaced) {
-                        // before first collage replacement
-                        if (pixelSize < INIT_MAX_ZOOM) {
-                            pixelSize++;
-                            try {
-                                resize(panel);
-                            } catch (Exception e1) {
-                                e1.printStackTrace();
-                            }
-                        } else {
-                            try {
-                                initialReplacement(panel);
-                                replaced = true;
-                            } catch (Exception e1) {
-                                e1.printStackTrace();
-                            }
-                        }
-
-                    } else {
-                        // all other replacement cases
-                        if (imageSideLength < MAX_ZOOM) {
-                            try {
-                                resize(panel);
-                            } catch (Exception e1) {
-                                e1.printStackTrace();
-                            }
-                        } else {
-                            try {
-                                replacePixelsWithImages(panel);
-                                replaced = true;
-                                pixelSize = 1;
-                                imageSideLength = INIT_MAX_ZOOM;
-                            } catch (Exception e1) {
-                                e1.printStackTrace();
-                            }
-    
-                        }
-                    }
-
-
+                    zoom(panel);
                 }
             }
         });
+
         scrollPane.setViewportView(panel);
     }
+
+    public void zoom(JPanel panel) {
+        if (!replaced) {
+            // before first collage replacement
+            if (pixelSize < INIT_MAX_ZOOM) {
+                pixelSize++;
+                try {
+                    resize(panel);
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            } else {
+                try {
+                    initialReplacement(panel);
+                    replaced = true;
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            }
+
+        } else {
+            // all other replacement cases
+            if (imageSideLength < MAX_ZOOM) {
+                try {
+                    resize(panel);
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            } else {
+                try {
+                    replacePixelsWithImages(panel);
+                    replaced = true;
+                    pixelSize = 1;
+                    imageSideLength = INIT_MAX_ZOOM;
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+
+            }
+        }
+    }
+
 
     /**
      * Rescale and display image, which replaces current image
@@ -188,6 +210,7 @@ public class ImageZoom {
         label = new JLabel( new ImageIcon(resizedImage) );
         panel.removeAll();
         panel.add(displayInfoMenu(panel));
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
         panel.add(label, BorderLayout.CENTER);
         panel.revalidate();
         panel.repaint();
@@ -270,6 +293,7 @@ public class ImageZoom {
         label = new JLabel( new ImageIcon(collage) );
         panel.removeAll();
         panel.add(displayInfoMenu(panel));
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
         panel.add(label, BorderLayout.CENTER);
         panel.revalidate();
         panel.repaint();
@@ -344,6 +368,7 @@ public class ImageZoom {
         label = new JLabel( new ImageIcon(collage) );
         panel.removeAll();
         panel.add(displayInfoMenu(panel));
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
         panel.add(label, BorderLayout.CENTER);
         panel.revalidate();
         panel.repaint();
@@ -424,9 +449,44 @@ public class ImageZoom {
         info.setText(stats);
         info.setEditable(false);
         info.setBackground(new Color(255,255,255,200));
-        info.setBounds(5, 5, 280, 120);
+        info.setBounds(5, 50, 280, 120);
     
         return info;
+    }
+
+    public void initializeToggle(JPanel panel) {
+        toggleButton = new JToggleButton("Play");
+
+        toggleButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                AbstractButton abstractButton = (AbstractButton) e.getSource();
+                boolean selected = abstractButton.getModel().isSelected();
+
+                if (selected) {
+                    long start = System.currentTimeMillis();
+                    toggleButton.setText("Pause");
+
+                    while (true) {
+                        if (System.currentTimeMillis() - start > 1000) {
+                            zoom(panel);
+                        } else {
+                            start = System.currentTimeMillis();
+                        }
+                    }
+
+                } else {
+                    toggleButton.setText("Play");
+                }
+            }
+        });
+    }
+
+    public JMenuBar displayMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+        menuBar.add(toggleButton);
+
+        return menuBar;
     }
 
 }
