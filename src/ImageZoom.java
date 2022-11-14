@@ -31,6 +31,9 @@ public class ImageZoom {
     private int imageSideLength;
     private double ZOOM_INCR_PERCENT = 0.5;
     private JToggleButton toggleButton;
+    private Map<String, ArrayList<int[]>> imageCache;
+    private int totalSideLength;
+    private int sideLengthInImages;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
@@ -88,6 +91,9 @@ public class ImageZoom {
             image = ImageIO.read(new File(filename));
             files.add(filename);
             imageSideLength = image.getWidth();
+            totalSideLength = imageSideLength;
+            // cacheImagesForCollage(image);
+            sideLengthInImages = 1;
         } catch (IOException e) {
             System.out.println(e);
         }
@@ -107,13 +113,12 @@ public class ImageZoom {
         Icon imageIcon = new ImageIcon(filename);
         label = new JLabel( imageIcon );
         panel.add(label, BorderLayout.CENTER);
-
         panel.setFocusable(true);
+
+        // zoom using spacebar
         panel.addKeyListener(new KeyListener() {
             @Override
-            public void keyTyped(KeyEvent e) {
-
-            }
+            public void keyTyped(KeyEvent e) {}
 
             @Override
             public void keyPressed(KeyEvent e) {
@@ -124,12 +129,10 @@ public class ImageZoom {
             }
 
             @Override
-            public void keyReleased(KeyEvent e) {
-
-            }
+            public void keyReleased(KeyEvent e) {}
         });
 
-        // add zoom ability. can only zoom in 
+        // zoom using mouse wheel
         panel.addMouseWheelListener(new MouseWheelListener() {
             public void mouseWheelMoved(MouseWheelEvent e) {
                 int notches = e.getWheelRotation();
@@ -146,7 +149,7 @@ public class ImageZoom {
         if (!replaced) {
             // before first collage replacement
             if (pixelSize < INIT_MAX_ZOOM) {
-                pixelSize++;
+                pixelSize = (int)((double) totalSideLength / (double) image.getWidth());
                 try {
                     resize(panel);
                 } catch (Exception e1) {
@@ -154,8 +157,8 @@ public class ImageZoom {
                 }
             } else {
                 try {
-                    initialReplacement(panel);
                     replaced = true;
+                    initialReplacement(panel);
                 } catch (Exception e1) {
                     e1.printStackTrace();
                 }
@@ -171,10 +174,8 @@ public class ImageZoom {
                 }
             } else {
                 try {
-                    replacePixelsWithImages(panel);
-                    replaced = true;
-                    pixelSize = 1;
                     imageSideLength = INIT_MAX_ZOOM;
+                    collageReplacement(panel);
                 } catch (Exception e1) {
                     e1.printStackTrace();
                 }
@@ -190,16 +191,15 @@ public class ImageZoom {
      */
     public void resize (JPanel panel) throws Exception {
         // calculate new total side length = width = height
-        int lengthInImages = (int) Math.sqrt(files.size());
         imageSideLength = (int)(imageSideLength * (1 + ZOOM_INCR_PERCENT));
-        int totalLength = imageSideLength * lengthInImages;
+        totalSideLength = (int)(imageSideLength * sideLengthInImages);
 
         // create new graphic with new dimensions
-        BufferedImage resizedImage = new BufferedImage(totalLength, totalLength, BufferedImage.TYPE_INT_RGB);
+        BufferedImage resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics2D = resizedImage.createGraphics();
         
         if (!replaced) {
-            graphics2D.drawImage(image, 0, 0, totalLength, totalLength, null);
+            graphics2D.drawImage(image, 0, 0, totalSideLength, totalSideLength, null);
         } else {
             drawImageByImage(graphics2D);
         }
@@ -217,76 +217,27 @@ public class ImageZoom {
     }
 
     /**
-     * Draw an image one pixel area at a time on a given graphic. This does not draw over the original image. Pixel area refers to the space an original pixel should cover.
-     * @param g
-     */
-    public void drawPixelByPixel(Graphics2D g) {
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) { 
-                // get the RGB color from space of original pixel
-                int color = image.getRGB(x, y);
-                int red = (color & 0x00ff0000) >> 16;
-                int green = (color & 0x0000ff00) >> 8;
-                int blue = color & 0x000000ff;
-
-                // fill resized pixel with color
-                g.setColor(new Color(red, green, blue));
-                g.fillRect(x*pixelSize, y*pixelSize, pixelSize, pixelSize);
-            }
-        }
-    }
-
-    /**
      * Draw collage image by image
      */
     public void drawImageByImage(Graphics2D g2d) throws Exception {
-        int lengthInImages = (int) Math.sqrt(files.size());
-        int index = 0;
-        for (int x = 0; x < lengthInImages; x++) {
-            for (int y = 0; y < lengthInImages; y++) {
-                // fix
-                g2d.drawImage(ImageIO.read(new File(files.get(index))), x*imageSideLength, y*imageSideLength, imageSideLength, imageSideLength, null);
-                index++;
+        for (String filename : imageCache.keySet()) {
+            BufferedImage img = ImageIO.read(new File(filename));
+            for (int[] coord : imageCache.get(filename)) {
+                g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
             }
         }
     }
 
     public void initialReplacement(JPanel panel) throws Exception {
         numZooms++;
-        files = new ArrayList<>();
-        int lengthInImages = image.getWidth();
-        imageSideLength = (int) Math.ceil((double)imageSideLength / (double)lengthInImages);
-        int totalSideLength = lengthInImages * imageSideLength;
-
+        cacheImagesForCollage(image);
+        imageSideLength = (int) Math.ceil((double)totalSideLength / (double)sideLengthInImages);
+        totalSideLength = sideLengthInImages * imageSideLength;
+        
         BufferedImage collage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = collage.createGraphics();
-
-
-        for (int x = 0; x < image.getHeight(); x++) {
-            for (int y = 0; y < image.getWidth(); y++) {
-                int pixelColor = image.getRGB(x, y);
-                String bestMatchFilename = "";
-                int smallestDiff = COLOR_TOLERANCE;
-
-                // search through map for closest color match
-                for (Integer imgColor: averageColors.keySet()) {
-                    int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
-                    if (diff < smallestDiff) {
-                        smallestDiff = diff;
-                        bestMatchFilename = averageColors.get(imgColor);
-                    }
-                }
-
-                try {
-                    g2d.drawImage(ImageIO.read(new File(bestMatchFilename)), x * imageSideLength, y * imageSideLength, imageSideLength, imageSideLength, null);
-                    files.add(bestMatchFilename);
-                } catch (IOException err) {
-                    System.out.println(err);
-                }
-
-            }
-        }
-        // System.out.printf("files: %s\n", files.toString());
+        
+        drawImageByImage(g2d);
         g2d.dispose();
 
         // place collage in new jlabel and replace old
@@ -305,63 +256,36 @@ public class ImageZoom {
      * @param panel
      * @throws Exception
      */
-    public void replacePixelsWithImages(JPanel panel) throws Exception {
+    public void collageReplacement(JPanel panel) throws Exception {
         numZooms++;
-        BufferedImage collage = null;
+        cacheImagesForCollage(image);
 
         // memory saver: after 1 zoom level, only use "center" images to create the next collage.
         // calculate coordinates of center images. units are image areas not pixels
-        int centerFile = files.size() / 2;
-        files.subList(centerFile + 9, files.size()).clear();
-        files.subList(0, centerFile - 7).clear();
+        // int centerFile = files.size() / 2;
+        // files.subList(centerFile + 9, files.size()).clear();
+        // files.subList(0, centerFile - 7).clear();
 
         // draw cropped collage
-        int lengthInImages = (int) Math.sqrt(files.size());
-        collage = new BufferedImage(lengthInImages * imageSideLength, lengthInImages * imageSideLength, BufferedImage.TYPE_INT_RGB);
+        // int lengthInImages = (int) Math.sqrt(files.size());
+        BufferedImage collage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = collage.createGraphics();
-        int var = 0;
-        for (int i = 0; i < lengthInImages; i++) {
-            for (int j = 0; j < lengthInImages; j++) {
-                String file = files.get(var);
-                g2d.drawImage(ImageIO.read(new File(file)), i*imageSideLength, j*imageSideLength, imageSideLength, imageSideLength, null);
-                var++;
-            }
-        }
-        g2d.dispose();
-        image = collage;
-        files = new ArrayList<>();
+        // int var = 0;
+        // for (int i = 0; i < lengthInImages; i++) {
+        //     for (int j = 0; j < lengthInImages; j++) {
+        //         String file = files.get(var);
+        //         g2d.drawImage(ImageIO.read(new File(file)), i*imageSideLength, j*imageSideLength, imageSideLength, imageSideLength, null);
+        //         var++;
+        //     }
+        // }
+        // g2d.dispose();
+        // image = collage;
+        // files = new ArrayList<>();
 
-        imageSideLength = 5;
+        // imageSideLength = 5;
 
-        // replace each pixel area with new image
-        for (int x = 0; x < image.getHeight(); x += 5) {
-            for (int y = 0; y < image.getWidth(); y += 5) {
-                int pixelColor = image.getRGB(x, y);
-                BufferedImage img = null;
-                String bestMatchFilename = "";
-                int smallestDiff = COLOR_TOLERANCE;
-
-                // search through map for closest color match
-                for (Integer imgColor: averageColors.keySet()) {
-                    int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
-                    if (diff < smallestDiff) {
-                        smallestDiff = diff;
-                        bestMatchFilename = averageColors.get(imgColor);
-                    }
-                }
-
-                try {
-                    img = ImageIO.read(new File(bestMatchFilename));
-                    files.add(bestMatchFilename);
-                } catch (IOException err) {
-                    // System.out.println(err);
-                }
-
-//                g2d.drawImage(img, x * imageSideLength, y * imageSideLength, imageSideLength, imageSideLength, null);
-            }
-        }
+        imageSideLength = INIT_MAX_ZOOM;
         drawImageByImage(g2d);
-        // System.out.printf("files: %s\n", files.toString());
         g2d.dispose();
 
         // place collage in new jlabel and replace old
@@ -437,7 +361,7 @@ public class ImageZoom {
 
         // text being displayed
 //        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + " px\n";
-//        String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + " px\n";
+        // String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + " px\n";
         String overallSize = "Total side length: " + Integer.toString(imageSideLength * lengthInImages) + " px\n";
         String imageLength = "Image side length: " + Integer.toString(imageSideLength) + " px\n";
         String zooms = "Collage replacements: " + Integer.toString(numZooms) + "\n";
@@ -487,6 +411,41 @@ public class ImageZoom {
         menuBar.add(toggleButton);
 
         return menuBar;
+    }
+
+    public void cacheImagesForCollage(BufferedImage parentImage) {
+        imageCache = new HashMap<>();
+        int numPixels = 0;
+        
+        for (int x = 0; x < parentImage.getHeight(); x++) {
+            for (int y = 0; y < parentImage.getWidth(); y++) {
+                numPixels++;
+
+                ArrayList<int[]> coordinates = new ArrayList<>();
+                int pixelColor = parentImage.getRGB(x, y);
+                String bestMatchFilename = "";
+                int smallestDiff = COLOR_TOLERANCE;
+
+                // search through color map for closest match
+                for (Integer imgColor: averageColors.keySet()) {
+                    int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
+                    if (diff < smallestDiff) {
+                        smallestDiff = diff;
+                        bestMatchFilename = averageColors.get(imgColor);
+                    }
+                }
+
+                // cache image and location(s)
+                if (imageCache.containsKey(bestMatchFilename)) {
+                    coordinates = imageCache.get(bestMatchFilename);
+                }
+                coordinates.add(new int[]{x,y});
+                imageCache.put(bestMatchFilename, coordinates);
+
+            }
+        }
+
+        sideLengthInImages = (int)Math.sqrt(numPixels);
     }
 
 }
