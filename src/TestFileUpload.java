@@ -4,17 +4,12 @@ import java.io.File;
 
 import javax.swing.*;
 
-import javafx.event.ActionEvent;
-
-import java.awt.*;
-
 public class TestFileUpload {
 
   private JFrame frame = new JFrame();
   private JPanel panel = new JPanel();
-  private JMenuBar menuBar = new JMenuBar();
-  private JButton fileUploadBtn = new JButton("Choose images");
-  private String imagesDirectory = "";
+  private JTextArea prompt = new JTextArea("");
+  private JButton fileUploadBtn = new JButton("Choose directory");
 
   public void run() {
     
@@ -36,18 +31,19 @@ public class TestFileUpload {
           // check directory contains only image file types
           int response = fc.showOpenDialog(null);
           if (response == JFileChooser.APPROVE_OPTION) {
+            String imagesDirectoryPath = fc.getSelectedFile().getAbsolutePath();
             File directory = new File(fc.getSelectedFile().getAbsolutePath());
             File[] files = directory.listFiles();
             if (files != null) {
-              for (File f : files) {
-                int extIdx = f.toString().lastIndexOf(".");
-                if (extIdx > 0) {
-                  //
-                } else {
-                  // not all files are images
-                }
+              // we assume all files are image files
+              // process files and choose random one to start
+              /*
+              averageColors = calculateAverageColors(imagesDirectoryPath);
+              Random rand = new Random();
+              image = ImageIO.read(files.get(rand.nextInt(givenList.size())));
 
-              }
+              // continue to collage visuals
+              */
             }
             // System.out.println(filePath);
           }
@@ -56,9 +52,9 @@ public class TestFileUpload {
       
     });
 
-    menuBar.add(fileUploadBtn);
-    panel.setLayout(new BorderLayout());
-    panel.add(menuBar, BorderLayout.NORTH);
+    // menuBar.add(fileUploadBtn);
+    // panel.setLayout(new BorderLayout());
+    panel.add(fileUploadBtn, BorderLayout.CENTER);
     panel.setFocusable(true);
   }
 
