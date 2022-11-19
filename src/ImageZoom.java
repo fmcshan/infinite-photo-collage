@@ -11,20 +11,18 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class ImageZoom {
 
-    public static final int SCALE_DEFAULT = 1; // 
-    double EDGE_TOLERANCE = 0.4; // percent of image width/height to ignore around edges when color matching
+    public static final int SCALE_DEFAULT = 1; //
     int COLOR_TOLERANCE = Integer.MAX_VALUE; // tolerance for matching colors
     int MAX_ZOOM = 250; // max side length 1 image tile
     int INIT_MAX_ZOOM = 10; // max side length of 1 original pixel before image replacement
     private JFrame frmImageZoomIn;
     private JLabel label = null;
     private BufferedImage image = null; // zoom level 0
-    private int pixelSize = 1;  // side length of 1 pixel in original image
     private Map<Integer, String> averageColors;
+    private int pixelSize = 1;  // side length of 1 pixel in original image
     private ArrayList<String> files = new ArrayList<>();
     private boolean replaced = false;
     private int numZooms = 0;
@@ -36,45 +34,17 @@ public class ImageZoom {
     private int sideLengthInImages;
 //    double COLLAGE_CROPPED_PERCENT = 0.45;
     private int tempTotalSideLength;
-
-    public static void main(String[] args) {
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    ImageZoom window = new ImageZoom();
-                    window.frmImageZoomIn.setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
+    private FileUpload fileUpload;
     
-    public ImageZoom() throws Exception {
-        averageColors = calculateAverageColors();
+    public ImageZoom(BufferedImage image, Map<Integer, String> averageColors) throws Exception {
+        this.image = image;
+        this.averageColors = averageColors;
         initialize();
     }
 
-    /**
-     * Calculate average color of every image in dataset. Map color to name of image file.
-     * @return
-     * @throws IOException
-     */
-    public Map<Integer, String> calculateAverageColors() throws IOException {
-        Map<Integer, String> map = new HashMap<>();
-        File directory = new File("images");
-        File[] dirFiles = directory.listFiles();
-        if (dirFiles != null) {
-            for (File f : dirFiles) {
-                BufferedImage curr_img = ImageIO.read(f);
-                int imgColor = getAverageColor(curr_img, false).getRGB();
-                map.put(imgColor, f.getPath());
-            }
-        }
-        return map;
-    }
+    private void initialize() {
+        frmImageZoomIn.setVisible(true);
 
-    private void initialize() throws Exception {
         // create window
         frmImageZoomIn = new JFrame();
         frmImageZoomIn.setTitle("Infinite Photo Collage");
@@ -85,21 +55,10 @@ public class ImageZoom {
         JScrollPane scrollPane = new JScrollPane(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         frmImageZoomIn.getContentPane().add(scrollPane, BorderLayout.CENTER);
 
-        // prompt for user inputs
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("Enter an image file name:");
-        String filename = br.readLine();        
-        try {
-            image = ImageIO.read(new File(filename));
-            files.add(filename);
-            imageSideLength = image.getWidth();
-            totalSideLength = imageSideLength;
-            // cacheImagesForCollage(image);
-            sideLengthInImages = 1;
-        } catch (IOException e) {
-            System.out.println(e);
-        }
-        getAverageColor(image, false);
+        imageSideLength = image.getWidth();
+        totalSideLength = imageSideLength;
+        // cacheImagesForCollage(image);
+        sideLengthInImages = 1;
 
         JPanel panel = new JPanel();
         scrollPane.setViewportView(panel);
@@ -112,7 +71,7 @@ public class ImageZoom {
         panel.add(displayMenuBar(), BorderLayout.NORTH);
 
         // display image as icon
-        Icon imageIcon = new ImageIcon(filename);
+        Icon imageIcon = new ImageIcon(image);
         label = new JLabel( imageIcon );
         panel.add(label, BorderLayout.CENTER);
         panel.setFocusable(true);
@@ -293,45 +252,6 @@ public class ImageZoom {
         panel.revalidate();
         panel.repaint();
         image = collage;
-    }
-
-    /**
-     * Calculate the average color of a given image. Choose to include or exclude the edge colors with a set threshold.
-     * @param img
-     * @param includeEdges
-     * @return average color
-     */
-    public Color getAverageColor(BufferedImage img, boolean includeEdges) {
-        int red = 0;
-        int green = 0;
-        int blue = 0;
-        int numPixels = 0;
-        int startX = 0;
-        int startY = 0;
-        int endX = img.getWidth();
-        int endY = img.getHeight();
-
-        if (!includeEdges) {
-            startX = (int)(EDGE_TOLERANCE * img.getWidth());
-            startY = (int)(EDGE_TOLERANCE * img.getHeight());
-            endX = (int)(img.getWidth() - (EDGE_TOLERANCE * img.getWidth()));
-            endY = (int)(img.getHeight() - (EDGE_TOLERANCE * img.getHeight()));
-        }
-
-        // from every pixel, get the total R,G,B values
-        for (int y = startY; y < endY; y++) {
-            for (int x = startX; x < endX; x++) {
-                int color = img.getRGB(x, y);
-                red += (color & 0x00ff0000) >> 16;
-                green += (color & 0x0000ff00) >> 8;
-                blue += color & 0x000000ff;
-                numPixels++;
-            }
-        }
-
-        // resulting average color
-        Color averageColor = new Color(red/numPixels, green/numPixels, blue/numPixels);
-        return averageColor;
     }
 
     /**
