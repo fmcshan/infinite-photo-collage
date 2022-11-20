@@ -20,6 +20,7 @@ public class FileUpload {
   private BufferedImage image;
   private ImageZoom imageZoom;
   private Map<Integer, String> averageColors;
+  private int INIT_SIDE_LENGTH = 230;
 
   public static void main(String[] args) {
     EventQueue.invokeLater(new Runnable() {
@@ -35,13 +36,20 @@ public class FileUpload {
   }
 
   public BufferedImage run() throws Exception {
-    frame.setTitle("Test");
+    frame.setTitle("Infinite Photo Collage");
     frame.setBounds(100, 100, 450, 300);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.setVisible(true);
     frame.add(panel);
 
     fileUploadBtn.setFocusable(false);
+
+    prompt.setText("Select a directory of images to upload.");
+    prompt.setEditable(false);
+    panel.add(prompt, BorderLayout.CENTER);
+    panel.add(fileUploadBtn, BorderLayout.CENTER);
+    panel.setFocusable(true);
+
     fileUploadBtn.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(java.awt.event.ActionEvent e) {
@@ -67,8 +75,18 @@ public class FileUpload {
               Random rand = new Random();
               try {
                 image = ImageIO.read(files[rand.nextInt(files.length)]);
+
+                BufferedImage scaledImage = new BufferedImage(INIT_SIDE_LENGTH, INIT_SIDE_LENGTH, BufferedImage.TYPE_INT_RGB);
+                Graphics2D graphics2D = scaledImage.createGraphics();
+                graphics2D.drawImage(image, 0, 0, INIT_SIDE_LENGTH, INIT_SIDE_LENGTH, null);
+                graphics2D.dispose();
+
+                imageZoom = new ImageZoom(scaledImage, averageColors);
+                frame.setVisible(false);
               } catch (IOException ioException) {
                 ioException.printStackTrace();
+              } catch (Exception exception) {
+                exception.printStackTrace();
               }
 
               // continue to collage visuals
@@ -77,15 +95,10 @@ public class FileUpload {
           }
         }
       }
-      
     });
 
     // menuBar.add(fileUploadBtn);
     // panel.setLayout(new BorderLayout());
-    panel.add(fileUploadBtn, BorderLayout.CENTER);
-    panel.setFocusable(true);
-
-    imageZoom = new ImageZoom(image, averageColors);
 
     return image;
   }

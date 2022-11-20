@@ -4,10 +4,7 @@ import javax.swing.*;
 import javax.swing.plaf.FontUIResource;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +26,7 @@ public class ImageZoom {
     private int imageSideLength;
     private double ZOOM_INCR_PERCENT = 0.2;
     private JToggleButton toggleButton;
+    private JButton infoButton;
     private Map<String, ArrayList<int[]>> imageCache;
     private int totalSideLength;
     private int sideLengthInImages;
@@ -43,10 +41,9 @@ public class ImageZoom {
     }
 
     private void initialize() {
-        frmImageZoomIn.setVisible(true);
-
         // create window
         frmImageZoomIn = new JFrame();
+        frmImageZoomIn.setVisible(true);
         frmImageZoomIn.setTitle("Infinite Photo Collage");
         frmImageZoomIn.setBounds(100, 100, 450, 300);
         frmImageZoomIn.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -64,17 +61,27 @@ public class ImageZoom {
         scrollPane.setViewportView(panel);
         panel.setLayout(new BorderLayout());
 
-        // add info menu
-        panel.add(displayInfoMenu(panel));
-
         initializeToggle(panel);
-        panel.add(displayMenuBar(), BorderLayout.NORTH);
+        initializeInfoButton(panel);
 
         // display image as icon
-        Icon imageIcon = new ImageIcon(image);
-        label = new JLabel( imageIcon );
+//        Icon imageIcon = new ImageIcon(image);
+//        label = new JLabel( imageIcon );
+//        label.setSize(INIT_SIDE_LENGTH, INIT_SIDE_LENGTH);
+//        panel.add(label, BorderLayout.CENTER);
+//        panel.setFocusable(true);
+
+//        Graphics2D graphics2D = image.createGraphics();
+//        graphics2D.drawImage(image, 0, 0, totalSideLength, totalSideLength, null);
+//        graphics2D.dispose();
+
+        label = new JLabel( new ImageIcon(image) );
+        panel.removeAll();
+        panel.add(displayInfoMenu(panel));
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
         panel.add(label, BorderLayout.CENTER);
-        panel.setFocusable(true);
+        panel.revalidate();
+        panel.repaint();
 
         // zoom using spacebar
         panel.addKeyListener(new KeyListener() {
@@ -102,46 +109,22 @@ public class ImageZoom {
                 }
             }
         });
-
-        scrollPane.setViewportView(panel);
-//        scrollPane.getViewport().setViewPosition(new Point(frmImageZoomIn.getWidth() / 2, frmImageZoomIn.getHeight() / 2));
     }
 
     public void zoom(JPanel panel) {
-        if (!replaced) {
-            // before first collage replacement
-            if (pixelSize < INIT_MAX_ZOOM) {
-                pixelSize = (int)((double) totalSideLength / (double) image.getWidth());
-                try {
-                    resize(panel);
-                } catch (Exception e1) {
-                    e1.printStackTrace();
-                }
-            } else {
-                try {
-                    initialReplacement(panel);
-                    replaced = true;
-                } catch (Exception e1) {
-                    e1.printStackTrace();
-                }
+        if (imageSideLength < MAX_ZOOM) {
+            try {
+                resize(panel);
+            } catch (Exception e1) {
+                e1.printStackTrace();
             }
-
         } else {
-            // all other replacement cases
-            if (imageSideLength < MAX_ZOOM) {
-                try {
-                    resize(panel);
-                } catch (Exception e1) {
-                    e1.printStackTrace();
-                }
-            } else {
-                try {
-                    imageSideLength = INIT_MAX_ZOOM;
-                    collageReplacement(panel);
-                } catch (Exception e1) {
-                    e1.printStackTrace();
-                }
-
+            try {
+                imageSideLength = INIT_MAX_ZOOM;
+                collageReplacement(panel);
+                replaced = true;
+            } catch (Exception e1) {
+                e1.printStackTrace();
             }
         }
     }
@@ -198,32 +181,6 @@ public class ImageZoom {
         }
     }
 
-    public void initialReplacement(JPanel panel) throws Exception {
-        numZooms++;
-        cacheImagesForCollage(image);
-        imageSideLength = (int) (Math.ceil((double)totalSideLength / (double)sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
-        totalSideLength = sideLengthInImages * imageSideLength;
-        
-        BufferedImage collage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = collage.createGraphics();
-        
-        drawImageByImage(g2d);
-        g2d.dispose();
-
-//        JScrollPane scrollPane = (JScrollPane) frmImageZoomIn.getContentPane().getComponent(0);
-//        scrollPane.getViewport().setViewPosition(new Point(frmImageZoomIn.getWidth() / 2, frmImageZoomIn.getHeight() / 2));
-
-        // place collage in new jlabel and replace old
-        label = new JLabel( new ImageIcon(collage) );
-        panel.removeAll();
-        panel.add(displayInfoMenu(panel));
-        panel.add(displayMenuBar(), BorderLayout.NORTH);
-        panel.add(label, BorderLayout.CENTER);
-        panel.revalidate();
-        panel.repaint();
-        image = collage;
-    }
-
     /**
      * Replace all pixel areas visible with images that match the pixel's color. Color is matched up to a certain tolerance value. The displayed collage is a single graphic.
      * @param panel
@@ -234,7 +191,9 @@ public class ImageZoom {
         cacheImagesForCollage(image);
 
         // draw cropped collage
-        totalSideLength = (int) Math.ceil((double) (tempTotalSideLength * imageSideLength * 1.5));
+        if (replaced) {
+            totalSideLength = (int) Math.ceil((double) (tempTotalSideLength * imageSideLength * 1.5));
+        }
         imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
         totalSideLength = imageSideLength * sideLengthInImages;
         BufferedImage collage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
@@ -322,10 +281,32 @@ public class ImageZoom {
         });
     }
 
+    public void initializeInfoButton(JPanel panel) {
+        infoButton = new JButton("Details");
+        infoButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (e.getSource() == infoButton) {
+                    JFrame popup = new JFrame();
+                    JPanel panel = new JPanel();
+                    popup.setTitle("Infinite Photo Collage");
+                    popup.setBounds(300, 300, 400, 600);
+                    popup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    popup.setVisible(true);
+                    popup.add(panel);
+
+                    JTextArea info = new JTextArea("Info");
+                    info.setEditable(false);
+                    panel.add(info, BorderLayout.CENTER);
+                }
+            }
+        });
+    }
+
     public JMenuBar displayMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         menuBar.add(toggleButton);
-
+        menuBar.add(infoButton);
         return menuBar;
     }
 
