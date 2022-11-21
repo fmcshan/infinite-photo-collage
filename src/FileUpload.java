@@ -20,7 +20,7 @@ public class FileUpload {
   private BufferedImage image;
   private ImageZoom imageZoom;
   private Map<Integer, String> averageColors;
-  private int INIT_SIDE_LENGTH = 230;
+  private int INIT_SIDE_LENGTH = 20;
 
   public static void main(String[] args) {
     EventQueue.invokeLater(new Runnable() {

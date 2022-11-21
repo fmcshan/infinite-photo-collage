@@ -142,9 +142,12 @@ public class ImageZoom {
         // create new graphic with new dimensions
         BufferedImage resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
         if (numZooms >= 2) {
-            int x = (image.getWidth() / 2) - ((frmImageZoomIn.getWidth() + 1000) / 2);
-            int y = (image.getHeight() / 2) - ((frmImageZoomIn.getHeight() + 1000) / 2);
-            resizedImage.getSubimage(x, y, frmImageZoomIn.getWidth() + 1000, frmImageZoomIn.getHeight() + 1000);
+            // int x = (image.getWidth() / 2) - ((frmImageZoomIn.getWidth() + 50) / 2);
+            // int y = (image.getHeight() / 2) - ((frmImageZoomIn.getHeight() + 50) / 2);
+            // resizedImage.getSubimage(x, y, frmImageZoomIn.getWidth() + 50, frmImageZoomIn.getHeight() + 50);
+            int x = (image.getWidth() / 2) - (frmImageZoomIn.getWidth() / 2);
+            int y = (image.getHeight() / 2) - (frmImageZoomIn.getHeight() / 2);
+            resizedImage = resizedImage.getSubimage(x, y, (frmImageZoomIn.getWidth()), (frmImageZoomIn.getHeight()));
         }
 
         Graphics2D graphics2D = resizedImage.createGraphics();
