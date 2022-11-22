@@ -30,7 +30,6 @@ public class ImageZoom {
     private Map<String, ArrayList<int[]>> imageCache;
     private int totalSideLength;
     private int sideLengthInImages;
-//    double COLLAGE_CROPPED_PERCENT = 0.45;
     private int tempTotalSideLength;
     private FileUpload fileUpload;
     
@@ -48,32 +47,18 @@ public class ImageZoom {
         frmImageZoomIn.setBounds(100, 100, 450, 300);
         frmImageZoomIn.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // add scrolling ability
-        JScrollPane scrollPane = new JScrollPane(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-        frmImageZoomIn.getContentPane().add(scrollPane, BorderLayout.CENTER);
-
         imageSideLength = image.getWidth();
         totalSideLength = imageSideLength;
-        // cacheImagesForCollage(image);
         sideLengthInImages = 1;
 
         JPanel panel = new JPanel();
-        scrollPane.setViewportView(panel);
+        panel.setFocusable(true);
+        // scrollPane.setViewportView(panel);
+        frmImageZoomIn.getContentPane().add(panel, BorderLayout.CENTER);
         panel.setLayout(new BorderLayout());
 
         initializeToggle(panel);
         initializeInfoButton(panel);
-
-        // display image as icon
-//        Icon imageIcon = new ImageIcon(image);
-//        label = new JLabel( imageIcon );
-//        label.setSize(INIT_SIDE_LENGTH, INIT_SIDE_LENGTH);
-//        panel.add(label, BorderLayout.CENTER);
-//        panel.setFocusable(true);
-
-//        Graphics2D graphics2D = image.createGraphics();
-//        graphics2D.drawImage(image, 0, 0, totalSideLength, totalSideLength, null);
-//        graphics2D.dispose();
 
         label = new JLabel( new ImageIcon(image) );
         panel.removeAll();
@@ -138,17 +123,18 @@ public class ImageZoom {
         // calculate new total side length = width = height
         imageSideLength = (int)(imageSideLength * (1 + ZOOM_INCR_PERCENT));
         totalSideLength = (int)(imageSideLength * sideLengthInImages);
-
-        // create new graphic with new dimensions
-        BufferedImage resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
-        if (numZooms >= 2) {
-            // int x = (image.getWidth() / 2) - ((frmImageZoomIn.getWidth() + 50) / 2);
-            // int y = (image.getHeight() / 2) - ((frmImageZoomIn.getHeight() + 50) / 2);
-            // resizedImage.getSubimage(x, y, frmImageZoomIn.getWidth() + 50, frmImageZoomIn.getHeight() + 50);
-            int x = (image.getWidth() / 2) - (frmImageZoomIn.getWidth() / 2);
-            int y = (image.getHeight() / 2) - (frmImageZoomIn.getHeight() / 2);
-            resizedImage = resizedImage.getSubimage(x, y, (frmImageZoomIn.getWidth()), (frmImageZoomIn.getHeight()));
-        }
+        BufferedImage resizedImage;
+        
+        // crop to avoid heap space 
+        // if (numZooms >= 2) {
+        //     resizedImage = new BufferedImage((frmImageZoomIn.getWidth()), (frmImageZoomIn.getWidth()), BufferedImage.TYPE_INT_RGB);
+        //     // int x = (image.getWidth() / 2) - (frmImageZoomIn.getWidth() / 2);
+        //     // int y = (image.getHeight() / 2) - (frmImageZoomIn.getHeight() / 2);
+        //     // resizedImage = resizedImage.getSubimage(x, y, (frmImageZoomIn.getWidth()), (frmImageZoomIn.getHeight()));
+        // } else {
+        //     resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
+        // }
+        resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
 
         Graphics2D graphics2D = resizedImage.createGraphics();
         
@@ -180,6 +166,16 @@ public class ImageZoom {
             BufferedImage img = ImageIO.read(new File(filename));
             for (int[] coord : imageCache.get(filename)) {
                 g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
+                // if (numZooms < 2) {
+                //     g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
+
+                // } else {
+                //     if ((coord[0]*imageSideLength < ((sideLengthInImages/2 + sideLengthInImages/4) * imageSideLength) && coord[0]*imageSideLength > ((sideLengthInImages/2 - sideLengthInImages/4) * imageSideLength))
+                //     && (coord[1]*imageSideLength < ((sideLengthInImages/2 + sideLengthInImages/4) * imageSideLength) && coord[1]*imageSideLength > ((sideLengthInImages/2 - sideLengthInImages/4) * imageSideLength))) {
+                //         g2d.drawImage(img, coord[0]*imageSideLength + sideLengthInImages/4, coord[1]*imageSideLength + sideLengthInImages/4, imageSideLength, imageSideLength, null);
+    
+                //     } 
+                // }
             }
         }
     }
@@ -258,6 +254,7 @@ public class ImageZoom {
 
     public void initializeToggle(JPanel panel) {
         toggleButton = new JToggleButton("Play");
+        toggleButton.setFocusable(false);
 
         toggleButton.addActionListener(new ActionListener() {
             @Override
@@ -288,6 +285,8 @@ public class ImageZoom {
 
     public void initializeInfoButton(JPanel panel) {
         infoButton = new JButton("Details");
+        infoButton.setFocusable(false);
+
         infoButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
