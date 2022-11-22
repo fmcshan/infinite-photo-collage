@@ -265,18 +265,20 @@ public class ImageZoom {
                 AbstractButton abstractButton = (AbstractButton) e.getSource();
                 boolean selected = abstractButton.getModel().isSelected();
 
-                if (selected) {
-                    long start = System.currentTimeMillis();
-                    toggleButton.setText("Pause");
-
-                    while (true) {
-                        if (System.currentTimeMillis() - start > 1000) {
-                            zoom(panel);
+                Timer timer = new Timer(1000, new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        if (toggleButton.getText().equals("Play")) {
+                            ((Timer) e.getSource()).stop();
                         } else {
-                            start = System.currentTimeMillis();
+                            zoom(panel);
                         }
                     }
+                });
 
+                if (selected) {
+                    toggleButton.setText("Pause");
+                    timer.start();
                 } else {
                     toggleButton.setText("Play");
                 }
@@ -294,7 +296,7 @@ public class ImageZoom {
                     JPanel panel = new JPanel();
                     popup.setTitle("Infinite Photo Collage");
                     popup.setBounds(300, 300, 400, 600);
-                    popup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//                    popup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                     popup.setVisible(true);
                     popup.add(panel);
 
