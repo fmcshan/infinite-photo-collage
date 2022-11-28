@@ -126,15 +126,23 @@ public class ImageZoom {
         BufferedImage resizedImage;
         
         // crop to avoid heap space 
-        // if (numZooms >= 2) {
-        //     resizedImage = new BufferedImage((frmImageZoomIn.getWidth()), (frmImageZoomIn.getWidth()), BufferedImage.TYPE_INT_RGB);
-        //     // int x = (image.getWidth() / 2) - (frmImageZoomIn.getWidth() / 2);
-        //     // int y = (image.getHeight() / 2) - (frmImageZoomIn.getHeight() / 2);
-        //     // resizedImage = resizedImage.getSubimage(x, y, (frmImageZoomIn.getWidth()), (frmImageZoomIn.getHeight()));
-        // } else {
-        //     resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
-        // }
-        resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
+        if (numZooms >= 2) {
+            // // take the larger of the width vs. height
+            // int widthInImages = (int) Math.ceil((double)frmImageZoomIn.getWidth() / (double)imageSideLength);
+            // int heightInImages = (int) Math.ceil((double)frmImageZoomIn.getHeight() / (double)imageSideLength);
+            // if (widthInImages > heightInImages) {
+            //     sideLengthInImages = heightInImages;
+            // } else {
+            //     sideLengthInImages = widthInImages;
+            // }
+            // resizedImage = new BufferedImage(sideLengthInImages * imageSideLength, sideLengthInImages * imageSideLength, BufferedImage.TYPE_INT_RGB);
+
+            resizedImage = new BufferedImage(frmImageZoomIn.getWidth(), frmImageZoomIn.getWidth(), BufferedImage.TYPE_INT_RGB);
+
+        } else {
+            resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
+        }
+        // resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
 
         Graphics2D graphics2D = resizedImage.createGraphics();
         
@@ -165,17 +173,42 @@ public class ImageZoom {
         for (String filename : imageCache.keySet()) {
             BufferedImage img = ImageIO.read(new File(filename));
             for (int[] coord : imageCache.get(filename)) {
-                g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
-                // if (numZooms < 2) {
-                //     g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
+                // g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
+                if (numZooms < 2) {
+                    // crop image to be square without distortion
+                    int min = img.getWidth();
+                    if (img.getWidth() > img.getHeight()) {
+                        min = img.getHeight();
+                    }
+                    img = img.getSubimage(0, 0, min, min);
+                
+                    // draw image onto canvas
+                    g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
 
-                // } else {
-                //     if ((coord[0]*imageSideLength < ((sideLengthInImages/2 + sideLengthInImages/4) * imageSideLength) && coord[0]*imageSideLength > ((sideLengthInImages/2 - sideLengthInImages/4) * imageSideLength))
-                //     && (coord[1]*imageSideLength < ((sideLengthInImages/2 + sideLengthInImages/4) * imageSideLength) && coord[1]*imageSideLength > ((sideLengthInImages/2 - sideLengthInImages/4) * imageSideLength))) {
-                //         g2d.drawImage(img, coord[0]*imageSideLength + sideLengthInImages/4, coord[1]*imageSideLength + sideLengthInImages/4, imageSideLength, imageSideLength, null);
+                } else {
+                    // crop center of collage, remove edge images
+                    // if ((coord[1] < (int)Math.ceil(((double)(sideLengthInImages/2) + (double)(sideLengthInImages/4))) 
+                    //     && coord[1] > (int)Math.ceil(((double)(sideLengthInImages/2) - (double)(sideLengthInImages/4))))
+                    if ((coord[0]*imageSideLength < (int)Math.ceil(((double)(sideLengthInImages/2) + (double)(sideLengthInImages/4)) * imageSideLength) 
+                        && coord[0]*imageSideLength > (int)Math.ceil(((double)(sideLengthInImages/2) - (double)(sideLengthInImages/4)) * imageSideLength - 1)) 
+                        && (coord[1]*imageSideLength < (int)Math.ceil(((double)(sideLengthInImages/2) + (double)(sideLengthInImages/4)) * imageSideLength) 
+                        && coord[1]*imageSideLength > (int)Math.ceil(((double)(sideLengthInImages/2) - (double)(sideLengthInImages/4)) * imageSideLength - 1)) 
+                    ){
+                        // crop image to be square without distortion
+                        int min = img.getWidth();
+                        if (img.getWidth() > img.getHeight()) {
+                        min = img.getHeight();
+                        }
+                        img = img.getSubimage(0, 0, min, min);
+
+                        // draw image onto canvas
+                        g2d.drawImage(img, 
+                        (int)Math.ceil((double)(coord[0]*imageSideLength) - (double)((sideLengthInImages/4))), 
+                        (int)Math.ceil((double)(coord[1]*imageSideLength) - (double)((sideLengthInImages/4))), 
+                        imageSideLength, imageSideLength, null);
     
-                //     } 
-                // }
+                    } 
+                }
             }
         }
     }
