@@ -76,10 +76,7 @@ public class FileUpload {
               try {
                 // crop initial image to be square. use min of width and height
                 image = ImageIO.read(files[rand.nextInt(files.length)]);
-                int min = image.getWidth();
-                if (image.getWidth() > image.getHeight()) {
-                  min = image.getHeight();
-                }
+                int min = (image.getWidth() > image.getHeight()) ? image.getWidth() : image.getHeight();
                 image = image.getSubimage(0, 0, min, min);
 
                 // scale image to some inital size
