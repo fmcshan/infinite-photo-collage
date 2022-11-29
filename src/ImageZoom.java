@@ -11,24 +11,27 @@ import java.util.Map;
 
 public class ImageZoom {
 
+    public static final int SCALE_DEFAULT = 1; //
+    int COLOR_TOLERANCE = Integer.MAX_VALUE; // tolerance for matching colors
     int MAX_ZOOM = 250; // max side length 1 image tile
     int INIT_MAX_ZOOM = 10; // max side length of 1 original pixel before image replacement
-    private double ZOOM_INCR_PERCENT = 0.2;
-
     private JFrame frmImageZoomIn;
     private JLabel label = null;
-    private BufferedImage image = null;
+    private BufferedImage image = null; // zoom level 0
+    private Map<Integer, String> averageColors;
+    private int pixelSize = 1;  // side length of 1 pixel in original image
+    private ArrayList<String> files = new ArrayList<>();
+    private boolean replaced = false;
+    private int numZooms = 0;
+    private int imageSideLength;
+    private double ZOOM_INCR_PERCENT = 0.2;
     private JToggleButton toggleButton;
     private JButton infoButton;
-
-    private Map<Integer, String> averageColors; // map of average color to corresponding image filename
-    private Map<String, ArrayList<int[]>> imageCache; // map of image filename to location coordinates relative to collage being rendered
-    private boolean replaced = false; // if first collage replacement has occured
-    private int numZooms = 0; // number of collage replacements that have occured
-    private int imageSideLength; // side length in rendered pixels of one image
-    private int totalSideLength; // side length in rendered pixels of entire canvas
-    private int sideLengthInImages; // side length in images of collage being rendered
+    private Map<String, ArrayList<int[]>> imageCache;
+    private int totalSideLength;
+    private int sideLengthInImages;
     private int tempTotalSideLength;
+    private FileUpload fileUpload;
     
     public ImageZoom(BufferedImage image, Map<Integer, String> averageColors) throws Exception {
         this.image = image;
@@ -134,9 +137,6 @@ public class ImageZoom {
             // }
             // resizedImage = new BufferedImage(sideLengthInImages * imageSideLength, sideLengthInImages * imageSideLength, BufferedImage.TYPE_INT_RGB);
 
-            // use the max of frame width vs height for side length
-            int resizedLength = (frmImageZoomIn.getWidth() > frmImageZoomIn.getHeight()) ? frmImageZoomIn.getWidth() : frmImageZoomIn.getHeight();
-
             resizedImage = new BufferedImage(frmImageZoomIn.getWidth(), frmImageZoomIn.getWidth(), BufferedImage.TYPE_INT_RGB);
 
         } else {
@@ -176,7 +176,10 @@ public class ImageZoom {
                 // g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
                 if (numZooms < 2) {
                     // crop image to be square without distortion
-                    int min = (image.getWidth() > image.getHeight()) ? image.getWidth() : image.getHeight();
+                    int min = img.getWidth();
+                    if (img.getWidth() > img.getHeight()) {
+                        min = img.getHeight();
+                    }
                     img = img.getSubimage(0, 0, min, min);
                 
                     // draw image onto canvas
@@ -192,7 +195,10 @@ public class ImageZoom {
                         && coord[1]*imageSideLength > (int)Math.ceil(((double)(sideLengthInImages/2) - (double)(sideLengthInImages/4)) * imageSideLength - 1)) 
                     ){
                         // crop image to be square without distortion
-                        int min = (image.getWidth() > image.getHeight()) ? image.getWidth() : image.getHeight();
+                        int min = img.getWidth();
+                        if (img.getWidth() > img.getHeight()) {
+                        min = img.getHeight();
+                        }
                         img = img.getSubimage(0, 0, min, min);
 
                         // draw image onto canvas
@@ -258,14 +264,15 @@ public class ImageZoom {
      */
     public JTextArea displayInfoMenu(JPanel panel) {
         JTextArea info = new JTextArea();
+        int lengthInImages = (int) Math.sqrt(files.size());
 
         // text being displayed
 //        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + " px\n";
         // String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + " px\n";
-        // String overallSize = "Total side length: " + Integer.toString(imageSideLength * lengthInImages) + " px\n";
+        String overallSize = "Total side length: " + Integer.toString(imageSideLength * lengthInImages) + " px\n";
         String imageLength = "Image side length: " + Integer.toString(imageSideLength) + " px\n";
         String zooms = "Collage replacements: " + Integer.toString(numZooms) + "\n";
-        String stats = imageLength + zooms;
+        String stats = overallSize + imageLength + zooms;
 
         // set styling
         Font font = new FontUIResource(Font.MONOSPACED, Font.BOLD, 16);
@@ -321,6 +328,7 @@ public class ImageZoom {
                     JPanel panel = new JPanel();
                     popup.setTitle("Infinite Photo Collage");
                     popup.setBounds(300, 300, 400, 600);
+//                    popup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                     popup.setVisible(true);
                     popup.add(panel);
 
@@ -339,14 +347,10 @@ public class ImageZoom {
         return menuBar;
     }
 
-    /**
-     * Create a cache for a collage to be rendered from. Given some parent image, match each pixel in image to the average color of an image in 
-     * given map of average colors. Store image filename and map to coordinate location(s) relative to the parent image. 
-     * @param parentImage
-     */
     public void cacheImagesForCollage(BufferedImage parentImage) {
         imageCache = new HashMap<>();
         int numPixels = 0;
+
         int startX = 0;
         int startY = 0;
         int endX = parentImage.getWidth();
@@ -358,9 +362,12 @@ public class ImageZoom {
             startY = (parentImage.getHeight() / 2) - 40;
             endX = (parentImage.getWidth() / 2) + 40;
             endY = (parentImage.getHeight() / 2) + 40;
+//            startX = (int)(COLLAGE_CROPPED_PERCENT * parentImage.getWidth());
+//            startY = (int)(COLLAGE_CROPPED_PERCENT * parentImage.getHeight());
+//            endX = (int)(parentImage.getWidth() - (COLLAGE_CROPPED_PERCENT * parentImage.getWidth()));
+//            endY = (int)(parentImage.getHeight() - (COLLAGE_CROPPED_PERCENT * parentImage.getHeight()));
         }
 
-        // used later to calculate size of cropped collage
         tempTotalSideLength = endX - startX;
         
         for (int x = startX; x < endX; x++) {
@@ -370,9 +377,9 @@ public class ImageZoom {
                 ArrayList<int[]> coordinates = new ArrayList<>();
                 int pixelColor = parentImage.getRGB(x, y);
                 String bestMatchFilename = "";
-                int smallestDiff = Integer.MAX_VALUE;
+                int smallestDiff = COLOR_TOLERANCE;
 
-                // linear search through color map for closest match
+                // search through color map for closest match
                 for (Integer imgColor: averageColors.keySet()) {
                     int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
                     if (diff < smallestDiff) {
