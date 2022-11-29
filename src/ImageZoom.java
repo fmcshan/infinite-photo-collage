@@ -32,9 +32,10 @@ public class ImageZoom {
     private int sideLengthInImages;
     private int tempTotalSideLength;
     private FileUpload fileUpload;
+    //private int originalImageSideLength;
     
-    public ImageZoom(BufferedImage image, Map<Integer, String> averageColors) throws Exception {
-        this.image = image;
+    public ImageZoom(File file, Map<Integer, String> averageColors) throws Exception {
+        this.image = ImageIO.read(file);
         this.averageColors = averageColors;
         initialize();
     }
@@ -224,7 +225,7 @@ public class ImageZoom {
 
         // draw cropped collage
         if (replaced) {
-            totalSideLength = (int) Math.ceil((double) (tempTotalSideLength * imageSideLength * 1.5));
+            totalSideLength = (int) Math.ceil((double) (tempTotalSideLength * imageSideLength * (1 + ZOOM_INCR_PERCENT)));
         }
         imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
         totalSideLength = imageSideLength * sideLengthInImages;
@@ -269,10 +270,11 @@ public class ImageZoom {
         // text being displayed
 //        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + " px\n";
         // String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + " px\n";
-        String overallSize = "Total side length: " + Integer.toString(imageSideLength * lengthInImages) + " px\n";
-        String imageLength = "Image side length: " + Integer.toString(imageSideLength) + " px\n";
-        String zooms = "Collage replacements: " + Integer.toString(numZooms) + "\n";
-        String stats = overallSize + imageLength + zooms;
+//        String overallSize = "Starting image resolution: " + originalImageSideLength + " x " +
+//                originalImageSideLength + " px\n";
+        String imageLength = "Image side length: " + imageSideLength + " px\n";
+        String zooms = "Collage replacements: " + numZooms + "\n";
+        String stats = imageLength + zooms; //overallSize + 
 
         // set styling
         Font font = new FontUIResource(Font.MONOSPACED, Font.BOLD, 16);
@@ -280,7 +282,7 @@ public class ImageZoom {
         info.setText(stats);
         info.setEditable(false);
         info.setBackground(new Color(255,255,255,200));
-        info.setBounds(5, 50, 280, 120);
+        info.setBounds(5, 50, 400, 120);
     
         return info;
     }
@@ -332,7 +334,8 @@ public class ImageZoom {
                     popup.setVisible(true);
                     popup.add(panel);
 
-                    JTextArea info = new JTextArea("Info");
+                    JTextArea info = new JTextArea("Welcome to Infinite Photo Collage. \n" +
+                            "");
                     info.setEditable(false);
                     panel.add(info, BorderLayout.CENTER);
                 }

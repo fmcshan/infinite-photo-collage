@@ -75,7 +75,8 @@ public class FileUpload {
               Random rand = new Random();
               try {
                 // crop initial image to be square. use min of width and height
-                image = ImageIO.read(files[rand.nextInt(files.length)]);
+                File file = files[rand.nextInt(files.length)];
+                image = ImageIO.read(file);
                 int min = image.getWidth();
                 if (image.getWidth() > image.getHeight()) {
                   min = image.getHeight();
@@ -88,7 +89,7 @@ public class FileUpload {
                 graphics2D.drawImage(image, 0, 0, INIT_SIDE_LENGTH, INIT_SIDE_LENGTH, null);
                 graphics2D.dispose();
 
-                imageZoom = new ImageZoom(scaledImage, averageColors);
+                imageZoom = new ImageZoom(file, averageColors);
                 frame.setVisible(false);
 
               } catch (IOException ioException) {
