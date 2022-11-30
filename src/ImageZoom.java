@@ -11,31 +11,27 @@ import java.util.Map;
 
 public class ImageZoom {
 
-    public static final int SCALE_DEFAULT = 1; //
-    int COLOR_TOLERANCE = Integer.MAX_VALUE; // tolerance for matching colors
-    int MAX_ZOOM = 250; // max side length 1 image tile
+    int MAX_ZOOM = 250; // max side length 1 image tile before collage replacement
     int INIT_MAX_ZOOM = 10; // max side length of 1 original pixel before image replacement
+    private double ZOOM_INCR_PERCENT = 0.2; // percent increase of rendered image side length when zooming
+
     private JFrame frmImageZoomIn;
     private JLabel label = null;
-    private BufferedImage image = null; // zoom level 0
-    private Map<Integer, String> averageColors;
-    private int pixelSize = 1;  // side length of 1 pixel in original image
-    private ArrayList<String> files = new ArrayList<>();
-    private boolean replaced = false;
-    private int numZooms = 0;
-    private int imageSideLength;
-    private double ZOOM_INCR_PERCENT = 0.2;
+    private BufferedImage image = null; 
     private JToggleButton toggleButton;
     private JButton infoButton;
-    private Map<String, ArrayList<int[]>> imageCache;
-    private int totalSideLength;
-    private int sideLengthInImages;
+
+    private Map<Integer, String> averageColors; // map of average color to image filename
+    private Map<String, ArrayList<int[]>> imageCache; // map of image filename to coordinate location(s) in collage
+    private boolean replaced = false; // true after first replacement occurs
+    private int numZooms = 0; // number of collage replacements
+    private int imageSideLength; // rendered side length in pixels of one image tile
+    private int totalSideLength; // side length in pixels of rendered canvas
+    private int sideLengthInImages; // side length in images of collage
     private int tempTotalSideLength;
-    private FileUpload fileUpload;
-    //private int originalImageSideLength;
     
-    public ImageZoom(File file, Map<Integer, String> averageColors) throws Exception {
-        this.image = ImageIO.read(file);
+    public ImageZoom(/*File file*/ BufferedImage image, Map<Integer, String> averageColors) throws Exception {
+        this.image = image;
         this.averageColors = averageColors;
         initialize();
     }
@@ -53,6 +49,7 @@ public class ImageZoom {
         sideLengthInImages = 1;
 
         JPanel panel = new JPanel();
+        panel.setPreferredSize(new Dimension(24, 24));
         panel.setFocusable(true);
         // scrollPane.setViewportView(panel);
         frmImageZoomIn.getContentPane().add(panel, BorderLayout.CENTER);
@@ -154,9 +151,6 @@ public class ImageZoom {
         }
         graphics2D.dispose();
 
-//        JScrollPane scrollPane = (JScrollPane) frmImageZoomIn.getContentPane().getComponent(0);
-//        scrollPane.getViewport().setViewPosition(new Point(frmImageZoomIn.getWidth() / 2, frmImageZoomIn.getHeight() / 2));
-
         // place resized image in new jlabel and replace old
         label = new JLabel( new ImageIcon(resizedImage) );
         panel.removeAll();
@@ -169,6 +163,7 @@ public class ImageZoom {
 
     /**
      * Draw collage image by image
+     * @param g2d
      */
     public void drawImageByImage(Graphics2D g2d) throws Exception {
         for (String filename : imageCache.keySet()) {
@@ -265,13 +260,7 @@ public class ImageZoom {
      */
     public JTextArea displayInfoMenu(JPanel panel) {
         JTextArea info = new JTextArea();
-        int lengthInImages = (int) Math.sqrt(files.size());
-
-        // text being displayed
-//        String maxLevel = "Pixel length max: " + Integer.toString(MAX_ZOOM) + " px\n";
-        // String pixelSizing = "Pixel side length: " + Integer.toString(pixelSize) + " px\n";
-//        String overallSize = "Starting image resolution: " + originalImageSideLength + " x " +
-//                originalImageSideLength + " px\n";
+        
         String imageLength = "Image side length: " + imageSideLength + " px\n";
         String zooms = "Collage replacements: " + numZooms + "\n";
         String stats = imageLength + zooms; //overallSize + 
@@ -287,6 +276,10 @@ public class ImageZoom {
         return info;
     }
 
+    /**
+     * Initialize autoplay button functionality
+     * @param panel
+     */
     public void initializeToggle(JPanel panel) {
         toggleButton = new JToggleButton("Play");
         toggleButton.setFocusable(false);
@@ -330,7 +323,6 @@ public class ImageZoom {
                     JPanel panel = new JPanel();
                     popup.setTitle("Infinite Photo Collage");
                     popup.setBounds(300, 300, 400, 600);
-//                    popup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                     popup.setVisible(true);
                     popup.add(panel);
 
@@ -350,6 +342,10 @@ public class ImageZoom {
         return menuBar;
     }
 
+    /**
+     * Match images to replace parentImage using a map of average colors
+     * @param parentImage
+     */
     public void cacheImagesForCollage(BufferedImage parentImage) {
         imageCache = new HashMap<>();
         int numPixels = 0;
@@ -365,10 +361,6 @@ public class ImageZoom {
             startY = (parentImage.getHeight() / 2) - 40;
             endX = (parentImage.getWidth() / 2) + 40;
             endY = (parentImage.getHeight() / 2) + 40;
-//            startX = (int)(COLLAGE_CROPPED_PERCENT * parentImage.getWidth());
-//            startY = (int)(COLLAGE_CROPPED_PERCENT * parentImage.getHeight());
-//            endX = (int)(parentImage.getWidth() - (COLLAGE_CROPPED_PERCENT * parentImage.getWidth()));
-//            endY = (int)(parentImage.getHeight() - (COLLAGE_CROPPED_PERCENT * parentImage.getHeight()));
         }
 
         tempTotalSideLength = endX - startX;
@@ -380,7 +372,7 @@ public class ImageZoom {
                 ArrayList<int[]> coordinates = new ArrayList<>();
                 int pixelColor = parentImage.getRGB(x, y);
                 String bestMatchFilename = "";
-                int smallestDiff = COLOR_TOLERANCE;
+                int smallestDiff = Integer.MAX_VALUE;
 
                 // search through color map for closest match
                 for (Integer imgColor: averageColors.keySet()) {
