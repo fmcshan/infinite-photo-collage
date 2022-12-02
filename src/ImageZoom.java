@@ -135,7 +135,8 @@ public class ImageZoom {
             // }
             // resizedImage = new BufferedImage(sideLengthInImages * imageSideLength, sideLengthInImages * imageSideLength, BufferedImage.TYPE_INT_RGB);
 
-            resizedImage = new BufferedImage(frmImageZoomIn.getWidth(), frmImageZoomIn.getWidth(), BufferedImage.TYPE_INT_RGB);
+            int width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
+            resizedImage = new BufferedImage(width, width, BufferedImage.TYPE_INT_RGB);
 
         } else {
             resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
@@ -182,7 +183,11 @@ public class ImageZoom {
                     g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
 
                 } else {
-                    double frameWidthInImages = Math.max((frmImageZoomIn.getWidth() / sideLengthInImages), (frmImageZoomIn.getHeight() / sideLengthInImages));
+                    double frameWidthInImages = Math.max((frmImageZoomIn.getWidth() / imageSideLength), (frmImageZoomIn.getHeight() / imageSideLength));
+                    if (Math.ceil(frameWidthInImages) % 2 != 0) {
+                        frameWidthInImages += 1;
+                    }
+                    frameWidthInImages = (int) frameWidthInImages;
                     double croppedBound = (sideLengthInImages - frameWidthInImages) / 2;
                     // crop center of collage, remove edge images
                     // if ((coord[1] < (int)Math.ceil(((double)(sideLengthInImages/2) + (double)(sideLengthInImages/4))) 
@@ -199,8 +204,8 @@ public class ImageZoom {
 
                         // draw image onto canvas
                         g2d.drawImage(img, 
-                        (int)Math.ceil((double)(coord[0]*imageSideLength) - croppedBound),
-                        (int)Math.ceil((double)(coord[1]*imageSideLength) - croppedBound),
+                        (int)Math.ceil((double)(coord[0] - croppedBound) * imageSideLength),
+                        (int)Math.ceil((double)(coord[1] - croppedBound) * imageSideLength),
                         imageSideLength, imageSideLength, null);
     
                     } 
