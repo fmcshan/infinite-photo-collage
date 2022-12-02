@@ -51,7 +51,6 @@ public class ImageZoom {
         JPanel panel = new JPanel();
         panel.setPreferredSize(new Dimension(24, 24));
         panel.setFocusable(true);
-        // scrollPane.setViewportView(panel);
         frmImageZoomIn.getContentPane().add(panel, BorderLayout.CENTER);
         panel.setLayout(new BorderLayout());
 
@@ -70,6 +69,9 @@ public class ImageZoom {
         panel.addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {}
+            
+            @Override
+            public void keyReleased(KeyEvent e) {}
 
             @Override
             public void keyPressed(KeyEvent e) {
@@ -78,9 +80,6 @@ public class ImageZoom {
                     zoom(panel);
                 }
             }
-
-            @Override
-            public void keyReleased(KeyEvent e) {}
         });
 
         // zoom using mouse wheel
@@ -124,31 +123,24 @@ public class ImageZoom {
         BufferedImage resizedImage;
         
         // crop to avoid heap space 
-        if (numZooms >= 2) {
-            // // take the larger of the width vs. height
-            // int widthInImages = (int) Math.ceil((double)frmImageZoomIn.getWidth() / (double)imageSideLength);
-            // int heightInImages = (int) Math.ceil((double)frmImageZoomIn.getHeight() / (double)imageSideLength);
-            // if (widthInImages > heightInImages) {
-            //     sideLengthInImages = heightInImages;
-            // } else {
-            //     sideLengthInImages = widthInImages;
-            // }
-            // resizedImage = new BufferedImage(sideLengthInImages * imageSideLength, sideLengthInImages * imageSideLength, BufferedImage.TYPE_INT_RGB);
-
-            int width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
+        int width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
+        if (totalSideLength > width) {
+            int widthInImages = (int) Math.ceil((double) width / (double) imageSideLength);
+            if (widthInImages % 2 != 0) {
+                widthInImages += 1;
+            }
+            width = widthInImages * imageSideLength;
             resizedImage = new BufferedImage(width, width, BufferedImage.TYPE_INT_RGB);
-
         } else {
             resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
         }
-        // resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
 
         Graphics2D graphics2D = resizedImage.createGraphics();
         
         if (!replaced) {
             graphics2D.drawImage(image, 0, 0, totalSideLength, totalSideLength, null);
         } else {
-            drawImageByImage(graphics2D);
+            drawImageByImage(graphics2D, width);
         }
         graphics2D.dispose();
 
@@ -166,50 +158,39 @@ public class ImageZoom {
      * Draw collage image by image
      * @param g2d
      */
-    public void drawImageByImage(Graphics2D g2d) throws Exception {
+    public void drawImageByImage(Graphics2D g2d, double width) throws Exception {
         for (String filename : imageCache.keySet()) {
-            BufferedImage img = ImageIO.read(new File(filename));
             for (int[] coord : imageCache.get(filename)) {
-                // g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
-                if (numZooms < 2) {
+                
+                double frameWidthInImages = width / imageSideLength;
+                if (Math.ceil(frameWidthInImages) % 2 != 0) {
+                    frameWidthInImages += 1;
+                }
+                frameWidthInImages = (int) frameWidthInImages;
+                int croppedBound = 0;
+                if (totalSideLength > width) {
+                    croppedBound = (int) Math.ceil((sideLengthInImages - frameWidthInImages) / 2);
+                }
+                
+                if ((coord[0] >= croppedBound && coord[0] <= sideLengthInImages - croppedBound)
+                && (coord[1] >= croppedBound && coord[1] <= sideLengthInImages - croppedBound)
+                ){
                     // crop image to be square without distortion
+                    BufferedImage img = ImageIO.read(new File(filename));
                     int min = img.getWidth();
                     if (img.getWidth() > img.getHeight()) {
-                        min = img.getHeight();
+                    min = img.getHeight();
                     }
                     img = img.getSubimage(0, 0, min, min);
-                
+
                     // draw image onto canvas
-                    g2d.drawImage(img, coord[0]*imageSideLength, coord[1]*imageSideLength, imageSideLength, imageSideLength, null);
+                    g2d.drawImage(img, 
+                    (int)Math.ceil((double)(coord[0] - croppedBound) * imageSideLength),
+                    (int)Math.ceil((double)(coord[1] - croppedBound) * imageSideLength),
+                    imageSideLength, imageSideLength, null);
 
-                } else {
-                    double frameWidthInImages = Math.max((frmImageZoomIn.getWidth() / imageSideLength), (frmImageZoomIn.getHeight() / imageSideLength));
-                    if (Math.ceil(frameWidthInImages) % 2 != 0) {
-                        frameWidthInImages += 1;
-                    }
-                    frameWidthInImages = (int) frameWidthInImages;
-                    double croppedBound = (sideLengthInImages - frameWidthInImages) / 2;
-                    // crop center of collage, remove edge images
-                    // if ((coord[1] < (int)Math.ceil(((double)(sideLengthInImages/2) + (double)(sideLengthInImages/4))) 
-                    //     && coord[1] > (int)Math.ceil(((double)(sideLengthInImages/2) - (double)(sideLengthInImages/4))))
-                    if ((coord[0] >= croppedBound && coord[0] <= sideLengthInImages - croppedBound)
-                        && (coord[1] >= croppedBound && coord[1] <= sideLengthInImages - croppedBound)
-                    ){
-                        // crop image to be square without distortion
-                        int min = img.getWidth();
-                        if (img.getWidth() > img.getHeight()) {
-                        min = img.getHeight();
-                        }
-                        img = img.getSubimage(0, 0, min, min);
-
-                        // draw image onto canvas
-                        g2d.drawImage(img, 
-                        (int)Math.ceil((double)(coord[0] - croppedBound) * imageSideLength),
-                        (int)Math.ceil((double)(coord[1] - croppedBound) * imageSideLength),
-                        imageSideLength, imageSideLength, null);
-    
-                    } 
-                }
+                } 
+                
             }
         }
     }
@@ -224,7 +205,8 @@ public class ImageZoom {
         cacheImagesForCollage(image);
 
         // draw cropped collage
-        if (replaced) {
+        double width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
+        if (totalSideLength > width) {
             totalSideLength = (int) Math.ceil((double) (tempTotalSideLength * imageSideLength * (1 + ZOOM_INCR_PERCENT)));
         }
         imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
@@ -232,7 +214,7 @@ public class ImageZoom {
         BufferedImage collage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = collage.createGraphics();
 
-        drawImageByImage(g2d);
+        drawImageByImage(g2d, width);
         g2d.dispose();
 
         // place collage in new jlabel and replace old
@@ -268,7 +250,7 @@ public class ImageZoom {
         
         String imageLength = "Image side length: " + imageSideLength + " px\n";
         String zooms = "Collage replacements: " + numZooms + "\n";
-        String stats = imageLength + zooms; //overallSize + 
+        String stats = imageLength + zooms; 
 
         // set styling
         Font font = new FontUIResource(Font.MONOSPACED, Font.BOLD, 16);
@@ -360,15 +342,22 @@ public class ImageZoom {
         int endX = parentImage.getWidth();
         int endY = parentImage.getHeight();
 
-        if (replaced) {
-            // cropped collage will be 80x80 image tiles large
-            startX = (parentImage.getWidth() / 2) - 40;
-            startY = (parentImage.getHeight() / 2) - 40;
-            endX = (parentImage.getWidth() / 2) + 40;
-            endY = (parentImage.getHeight() / 2) + 40;
+        
+        double width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
+        if (totalSideLength > width) {
+            int frameWidthInImages = (int) Math.ceil(width / imageSideLength);
+            if (frameWidthInImages % 2 != 0) {
+                frameWidthInImages += 1;
+            }
+            double croppedBound = Math.abs((sideLengthInImages - frameWidthInImages) / 2);
+            startX = (int) Math.ceil(croppedBound);
+            startY = (int) Math.ceil(croppedBound);
+            endX = parentImage.getWidth() - (int) Math.ceil(croppedBound);
+            endY = parentImage.getHeight() - (int) Math.ceil(croppedBound);
         }
 
         tempTotalSideLength = endX - startX;
+        sideLengthInImages = tempTotalSideLength;
         
         for (int x = startX; x < endX; x++) {
             for (int y = startY; y < endY; y++) {
@@ -397,7 +386,6 @@ public class ImageZoom {
             }
         }
 
-        sideLengthInImages = (int)Math.sqrt(numPixels);
     }
 
 }
