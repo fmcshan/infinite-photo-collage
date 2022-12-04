@@ -342,14 +342,14 @@ public class ImageZoom {
         int endX = parentImage.getWidth();
         int endY = parentImage.getHeight();
 
-        
         double width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
         if (totalSideLength > width) {
             int frameWidthInImages = (int) Math.ceil(width / imageSideLength);
             if (frameWidthInImages % 2 != 0) {
                 frameWidthInImages += 1;
             }
-            double croppedBound = Math.abs((sideLengthInImages - frameWidthInImages) / 2);
+            imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
+            double croppedBound = Math.abs((sideLengthInImages - frameWidthInImages) / 2) * imageSideLength;
             startX = (int) Math.ceil(croppedBound);
             startY = (int) Math.ceil(croppedBound);
             endX = parentImage.getWidth() - (int) Math.ceil(croppedBound);
