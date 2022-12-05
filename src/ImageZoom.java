@@ -11,9 +11,10 @@ import java.util.Map;
 
 public class ImageZoom {
 
-    int MAX_ZOOM = 250; // max side length 1 image tile before collage replacement
+    int MAX_ZOOM = 100; // max side length 1 image tile before collage replacement
     int INIT_MAX_ZOOM = 10; // max side length of 1 original pixel before image replacement
-    private double ZOOM_INCR_PERCENT = 0.2; // percent increase of rendered image side length when zooming
+    private double ZOOM_INCR_PERCENT = 0.5; // percent increase of rendered image side length when zooming
+    private int INIT_SIDE_LENGTH = 20;
 
     private JFrame frmImageZoomIn;
     private JLabel label = null;
@@ -29,7 +30,6 @@ public class ImageZoom {
     private int totalSideLength; // side length in pixels of rendered canvas
     private int sideLengthInImages; // side length in images of collage
     private int tempTotalSideLength;
-    private int INIT_SIDE_LENGTH = 40;
     
     public ImageZoom(File file, Map<Integer, String> averageColors) throws Exception {
         ArrayList<int[]> list = new ArrayList<>();
@@ -217,9 +217,9 @@ public class ImageZoom {
 
         // draw cropped collage
         double width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
-        if (totalSideLength > width) {
-            totalSideLength = (int) Math.ceil((double) (tempTotalSideLength * imageSideLength * (1 + ZOOM_INCR_PERCENT)));
-        }
+        // if (totalSideLength > width) {
+        //     totalSideLength = (int) Math.ceil((double) (tempTotalSideLength * imageSideLength * (1 + ZOOM_INCR_PERCENT)));
+        // }
         imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
         totalSideLength = imageSideLength * sideLengthInImages;
         BufferedImage collage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
@@ -352,21 +352,21 @@ public class ImageZoom {
         int startY = 0;
         int endX = parentImage.getWidth();
         int endY = parentImage.getHeight();
-        sideLengthInImages = endX - startX;
 
         double width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
-        if (totalSideLength > width) {
-            int frameWidthInImages = (int) Math.ceil(width / imageSideLength);
-            if (frameWidthInImages % 2 != 0) {
-                frameWidthInImages += 1;
+        int frameWidthInImages = (int) Math.ceil(width / imageSideLength);
+        int maxSideLengthInImages = Math.max(parentImage.getHeight(), parentImage.getWidth());
+        if (maxSideLengthInImages > frameWidthInImages) {
+            int croppedBoundFromCenter = (int) Math.ceil(frameWidthInImages / 2);
+            if (croppedBoundFromCenter % 2 != 0) {
+                croppedBoundFromCenter += 1;
             }
-            // current issue is here
-            imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages));
-            double croppedBound = Math.abs((sideLengthInImages - frameWidthInImages) / 2);
-            startX = (int) Math.ceil(croppedBound);
-            startY = (int) Math.ceil(croppedBound);
-            endX = parentImage.getWidth() - (int) Math.ceil(croppedBound);
-            endY = parentImage.getHeight() - (int) Math.ceil(croppedBound);
+            int centerOfImage = Math.max(parentImage.getWidth()/2, parentImage.getHeight()/2);
+
+            startX = (int) Math.ceil(centerOfImage - croppedBoundFromCenter);
+            startY = (int) Math.ceil(centerOfImage - croppedBoundFromCenter);
+            endX = (int) Math.ceil(centerOfImage + croppedBoundFromCenter);
+            endY = (int) Math.ceil(centerOfImage + croppedBoundFromCenter);
         }
 
         tempTotalSideLength = endX - startX;
