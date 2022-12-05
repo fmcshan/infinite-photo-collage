@@ -33,7 +33,9 @@ public class ImageZoom {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
-                    ImageZoom window = new ImageZoom();
+                    String filename = args[0];
+                    int numReplacements = Integer.parseInt(args[1]);
+                    ImageZoom window = new ImageZoom(filename, numReplacements);
                     window.frmImageZoomIn.setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -42,9 +44,9 @@ public class ImageZoom {
         });
     }
     
-    public ImageZoom() throws Exception {
+    public ImageZoom(String filename, int numReplacements) throws Exception {
         averageColors = calculateAverageColors();
-        initialize();
+        initialize(filename, numReplacements);
     }
 
     /**
@@ -66,7 +68,7 @@ public class ImageZoom {
         return map;
     }
 
-    private void initialize() throws Exception {
+    private void initialize(String filename, int numReplacements) throws Exception {
         // create window
         frmImageZoomIn = new JFrame();
         frmImageZoomIn.setTitle("Infinite Photo Collage");
@@ -78,9 +80,9 @@ public class ImageZoom {
         frmImageZoomIn.getContentPane().add(scrollPane, BorderLayout.CENTER);
 
         // prompt for user inputs
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("Enter an image file name:");
-        String filename = br.readLine();        
+//        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+//        System.out.println("Enter an image file name:");
+//        String filename = br.readLine();
         try {
             image = ImageIO.read(new File(filename));
         } catch (IOException e) {
@@ -92,7 +94,7 @@ public class ImageZoom {
         panel.setFocusable(true);
         panel.setLayout(new BorderLayout());
 
-        initializeToggle(panel);
+        initializeToggle(panel, numReplacements);
 
         // add info menu
         panel.add(displayInfoMenu());
@@ -366,7 +368,7 @@ public class ImageZoom {
         return info;
     }
 
-    public void initializeToggle(JPanel panel) {
+    public void initializeToggle(JPanel panel, int numReplacements) {
         toggleButton = new JToggleButton("Play");
         toggleButton.setFocusable(false);
 
@@ -379,8 +381,9 @@ public class ImageZoom {
                 Timer timer = new Timer(500, new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        if (numZooms == 4) {
+                        if (numZooms == numReplacements) {
                             toggleButton.doClick();
+                            frmImageZoomIn.dispose();
                         }
                         if (toggleButton.getText().equals("Play")) {
                             ((Timer) e.getSource()).stop();
