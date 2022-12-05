@@ -22,16 +22,20 @@ public class ImageZoom {
     private JButton infoButton;
 
     private Map<Integer, String> averageColors; // map of average color to image filename
-    private Map<String, ArrayList<int[]>> imageCache; // map of image filename to coordinate location(s) in collage
+    private Map<String, ArrayList<int[]>> imageCache = new HashMap<>(); // map of image filename to coordinate location(s) in collage
     private boolean replaced = false; // true after first replacement occurs
     private int numZooms = 0; // number of collage replacements
     private int imageSideLength; // rendered side length in pixels of one image tile
     private int totalSideLength; // side length in pixels of rendered canvas
     private int sideLengthInImages; // side length in images of collage
     private int tempTotalSideLength;
+    private int INIT_SIDE_LENGTH = 40;
     
-    public ImageZoom(/*File file*/ BufferedImage image, Map<Integer, String> averageColors) throws Exception {
-        this.image = image;
+    public ImageZoom(File file, Map<Integer, String> averageColors) throws Exception {
+        ArrayList<int[]> list = new ArrayList<>();
+        list.add(new int[]{0, 0});
+        imageCache.put(file.getPath(), list);
+        this.image = ImageIO.read(file);
         this.averageColors = averageColors;
         initialize();
     }
@@ -44,9 +48,18 @@ public class ImageZoom {
         frmImageZoomIn.setBounds(100, 100, 450, 300);
         frmImageZoomIn.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        imageSideLength = image.getWidth();
+        imageSideLength = INIT_SIDE_LENGTH;
         totalSideLength = imageSideLength;
         sideLengthInImages = 1;
+
+        int min = (image.getWidth() > image.getHeight()) ? image.getHeight() : image.getWidth();
+        image = image.getSubimage(0, 0, min, min);
+
+        // scale image to some initial size
+        BufferedImage scaledImage = new BufferedImage(INIT_SIDE_LENGTH, INIT_SIDE_LENGTH, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics2D = scaledImage.createGraphics();
+        graphics2D.drawImage(image, 0, 0, INIT_SIDE_LENGTH, INIT_SIDE_LENGTH, null);
+        graphics2D.dispose();
 
         JPanel panel = new JPanel();
         panel.setPreferredSize(new Dimension(24, 24));
@@ -57,7 +70,8 @@ public class ImageZoom {
         initializeToggle(panel);
         initializeInfoButton(panel);
 
-        label = new JLabel( new ImageIcon(image) );
+        image = scaledImage;
+        label = new JLabel( new ImageIcon(scaledImage) );
         panel.removeAll();
         panel.add(displayInfoMenu(panel));
         panel.add(displayMenuBar(), BorderLayout.NORTH);
@@ -136,12 +150,9 @@ public class ImageZoom {
         }
 
         Graphics2D graphics2D = resizedImage.createGraphics();
-        
-        if (!replaced) {
-            graphics2D.drawImage(image, 0, 0, totalSideLength, totalSideLength, null);
-        } else {
-            drawImageByImage(graphics2D, width);
-        }
+
+        drawImageByImage(graphics2D, width);
+
         graphics2D.dispose();
 
         // place resized image in new jlabel and replace old
@@ -341,6 +352,7 @@ public class ImageZoom {
         int startY = 0;
         int endX = parentImage.getWidth();
         int endY = parentImage.getHeight();
+        sideLengthInImages = endX - startX;
 
         double width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
         if (totalSideLength > width) {
@@ -348,8 +360,9 @@ public class ImageZoom {
             if (frameWidthInImages % 2 != 0) {
                 frameWidthInImages += 1;
             }
-            imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
-            double croppedBound = Math.abs((sideLengthInImages - frameWidthInImages) / 2) * imageSideLength;
+            // current issue is here
+            imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages));
+            double croppedBound = Math.abs((sideLengthInImages - frameWidthInImages) / 2);
             startX = (int) Math.ceil(croppedBound);
             startY = (int) Math.ceil(croppedBound);
             endX = parentImage.getWidth() - (int) Math.ceil(croppedBound);

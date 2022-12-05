@@ -20,7 +20,6 @@ public class FileUpload {
   private BufferedImage image;
   private ImageZoom imageZoom;
   private Map<Integer, String> averageColors;
-  private int INIT_SIDE_LENGTH = 30;
 
   public static void main(String[] args) {
     EventQueue.invokeLater(new Runnable() {
@@ -76,18 +75,7 @@ public class FileUpload {
               try {
                 // crop initial image to be square. use min of width and height
                 File file = files[rand.nextInt(files.length)];
-                image = ImageIO.read(file);
-                int min = (image.getWidth() > image.getHeight()) ? image.getHeight() : image.getWidth();
-                image = image.getSubimage(0, 0, min, min);
-
-                // scale image to some inital size
-                BufferedImage scaledImage = new BufferedImage(INIT_SIDE_LENGTH, INIT_SIDE_LENGTH, BufferedImage.TYPE_INT_RGB);
-                Graphics2D graphics2D = scaledImage.createGraphics();
-                graphics2D.drawImage(image, 0, 0, INIT_SIDE_LENGTH, INIT_SIDE_LENGTH, null);
-                graphics2D.dispose();
-
-                // imageZoom = new ImageZoom(file, averageColors);
-                imageZoom = new ImageZoom(scaledImage, averageColors);
+                imageZoom = new ImageZoom(file, averageColors);
                 frame.setVisible(false);
 
               } catch (IOException ioException) {
@@ -100,9 +88,6 @@ public class FileUpload {
         }
       }
     });
-
-    // menuBar.add(fileUploadBtn);
-    // panel.setLayout(new BorderLayout());
 
     return image;
   }
