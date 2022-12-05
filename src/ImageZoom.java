@@ -27,6 +27,7 @@ public class ImageZoom {
     private boolean replaced = false;
     private int numZooms = 0;
     private JToggleButton toggleButton;
+    private Map<String, ArrayList<int[]>> imageCache;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
@@ -224,43 +225,53 @@ public class ImageZoom {
 
         // create new bufferedimage object with new dimensions
         numZooms++;
+        cacheImagesForCollage(image);
         BufferedImage collage = new BufferedImage(image.getWidth()*pixelSize, image.getHeight()*pixelSize, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = collage.createGraphics();
 
         long startTime = System.nanoTime();
-        // replace each pixel area with new image
-        for (int x = 0; x < image.getHeight(); x++) {
-            for (int y = 0; y < image.getWidth(); y++) {
-                int pixelColor = image.getRGB(x, y);
-                BufferedImage img = null;
-                String bestMatchFilename = "";
-                int smallestDiff = COLOR_TOLERANCE;
 
-                // search through map for closest color match
-                for (Integer imgColor: averageColors.keySet()) {
-                    int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
-                    if (diff < smallestDiff) {
-                        smallestDiff = diff;
-                        bestMatchFilename = averageColors.get(imgColor);
-                    }
-                }
-
-                try {
-                    img = ImageIO.read(new File(bestMatchFilename));
-                } catch (IOException err) {
-                    // System.out.println(err);
-                }
-
-                // calculate coordinates of center images. units are image areas not pixels
-                if (x <= (image.getWidth() / 2)+2 && x >= (image.getWidth() / 2) - 3
-                        && y <= (image.getHeight() / 2)+2 && y >= (image.getHeight() / 2) - 3) {
-                    files.add(bestMatchFilename);
-                    // System.out.printf("%d,%d\n", x, y);
-                }
-
-                g2d.drawImage(img, x * pixelSize, y * pixelSize, pixelSize, pixelSize, null);
+        for (String filename : imageCache.keySet()) {
+            BufferedImage img = ImageIO.read(new File(filename));
+            files.add(filename);
+            for (int[] coord : imageCache.get(filename)) {
+                g2d.drawImage(img, coord[0] * pixelSize, coord[1] * pixelSize, pixelSize, pixelSize, null);
             }
         }
+
+        // replace each pixel area with new image
+//        for (int x = 0; x < image.getHeight(); x++) {
+//            for (int y = 0; y < image.getWidth(); y++) {
+//                int pixelColor = image.getRGB(x, y);
+//                BufferedImage img = null;
+//                String bestMatchFilename = "";
+//                int smallestDiff = COLOR_TOLERANCE;
+//
+//                // search through map for closest color match
+//                for (Integer imgColor: averageColors.keySet()) {
+//                    int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
+//                    if (diff < smallestDiff) {
+//                        smallestDiff = diff;
+//                        bestMatchFilename = averageColors.get(imgColor);
+//                    }
+//                }
+//
+//                try {
+//                    img = ImageIO.read(new File(bestMatchFilename));
+//                } catch (IOException err) {
+//                    // System.out.println(err);
+//                }
+//
+//                // calculate coordinates of center images. units are image areas not pixels
+//                if (x <= (image.getWidth() / 2)+2 && x >= (image.getWidth() / 2) - 3
+//                        && y <= (image.getHeight() / 2)+2 && y >= (image.getHeight() / 2) - 3) {
+//                    files.add(bestMatchFilename);
+//                    // System.out.printf("%d,%d\n", x, y);
+//                }
+//
+//                g2d.drawImage(img, x * pixelSize, y * pixelSize, pixelSize, pixelSize, null);
+//            }
+//        }
         long endTime = System.nanoTime();
         long duration = (endTime - startTime) / 1000000;
         System.out.println("Time to replace: " + duration + " ms");
@@ -395,4 +406,56 @@ public class ImageZoom {
         return menuBar;
     }
 
+    public void cacheImagesForCollage(BufferedImage parentImage) {
+        imageCache = new HashMap<>();
+        int numPixels = 0;
+
+        int startX = 0;
+        int startY = 0;
+        int endX = parentImage.getWidth();
+        int endY = parentImage.getHeight();
+
+//        if (replaced) {
+//            // cropped collage will be 80x80 image tiles large
+//            startX = (parentImage.getWidth() / 2) - 40;
+//            startY = (parentImage.getHeight() / 2) - 40;
+//            endX = (parentImage.getWidth() / 2) + 40;
+//            endY = (parentImage.getHeight() / 2) + 40;
+////            startX = (int)(COLLAGE_CROPPED_PERCENT * parentImage.getWidth());
+////            startY = (int)(COLLAGE_CROPPED_PERCENT * parentImage.getHeight());
+////            endX = (int)(parentImage.getWidth() - (COLLAGE_CROPPED_PERCENT * parentImage.getWidth()));
+////            endY = (int)(parentImage.getHeight() - (COLLAGE_CROPPED_PERCENT * parentImage.getHeight()));
+//        }
+
+//        tempTotalSideLength = endX - startX;
+
+        for (int x = startX; x < endX; x++) {
+            for (int y = startY; y < endY; y++) {
+                numPixels++;
+
+                ArrayList<int[]> coordinates = new ArrayList<>();
+                int pixelColor = parentImage.getRGB(x, y);
+                String bestMatchFilename = "";
+                int smallestDiff = COLOR_TOLERANCE;
+
+                // search through color map for closest match
+                for (Integer imgColor: averageColors.keySet()) {
+                    int diff = calculateColorDifference(new Color(imgColor), new Color(pixelColor));
+                    if (diff < smallestDiff) {
+                        smallestDiff = diff;
+                        bestMatchFilename = averageColors.get(imgColor);
+                    }
+                }
+
+                // cache image and location(s)
+                if (imageCache.containsKey(bestMatchFilename)) {
+                    coordinates = imageCache.get(bestMatchFilename);
+                }
+                coordinates.add(new int[]{x - startX, y - startY});
+                imageCache.put(bestMatchFilename, coordinates);
+            }
+        }
+
+//        sideLengthInImages = (int)Math.sqrt(numPixels);
+    }
 }
