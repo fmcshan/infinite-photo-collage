@@ -227,7 +227,7 @@ public class ImageZoom {
         BufferedImage collage = new BufferedImage(image.getWidth()*pixelSize, image.getHeight()*pixelSize, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = collage.createGraphics();
 
-        long startTime = System.nanoTime();
+        ArrayList<Long> times = new ArrayList<>();
         // replace each pixel area with new image
         for (int x = 0; x < image.getHeight(); x++) {
             for (int y = 0; y < image.getWidth(); y++) {
@@ -245,12 +245,6 @@ public class ImageZoom {
                     }
                 }
 
-                try {
-                    img = ImageIO.read(new File(bestMatchFilename));
-                } catch (IOException err) {
-                    // System.out.println(err);
-                }
-
                 // calculate coordinates of center images. units are image areas not pixels
                 if (x <= (image.getWidth() / 2)+2 && x >= (image.getWidth() / 2) - 3
                         && y <= (image.getHeight() / 2)+2 && y >= (image.getHeight() / 2) - 3) {
@@ -258,12 +252,24 @@ public class ImageZoom {
                     // System.out.printf("%d,%d\n", x, y);
                 }
 
+                long startTime = System.nanoTime();
+                try {
+                    img = ImageIO.read(new File(bestMatchFilename));
+                } catch (IOException err) {
+                    // System.out.println(err);
+                }
+
                 g2d.drawImage(img, x * pixelSize, y * pixelSize, pixelSize, pixelSize, null);
+                long endTime = System.nanoTime();
+                long duration = (endTime - startTime) / 1000000;
+                times.add(duration);
             }
         }
-        long endTime = System.nanoTime();
-        long duration = (endTime - startTime) / 1000000;
-        System.out.println("Time to replace: " + duration + " ms");
+        long totalTime = 0;
+        for (long time : times) {
+            totalTime += time;
+        }
+        System.out.println("Time to replace: " + totalTime + " ms");
         // System.out.printf("files: %s\n", files.toString());
         g2d.dispose();
 
