@@ -1,15 +1,8 @@
 import java.awt.*;
 import javax.imageio.ImageIO;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
+import javax.swing.*;
 import javax.swing.plaf.FontUIResource;
-import javax.swing.JPanel;
-import java.awt.event.MouseWheelListener;
-import java.awt.event.MouseWheelEvent;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -33,6 +26,7 @@ public class ImageZoom {
     private ArrayList<String> files = new ArrayList<>();
     private boolean replaced = false;
     private int numZooms = 0;
+    private JToggleButton toggleButton;
 
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
@@ -94,38 +88,66 @@ public class ImageZoom {
         getAverageColor(image, false);
 
         JPanel panel = new JPanel();
+        panel.setFocusable(true);
         panel.setLayout(new BorderLayout());
+
+        initializeToggle(panel);
 
         // add info menu
         panel.add(displayInfoMenu());
+
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
 
         // display image as icon
         Icon imageIcon = new ImageIcon(filename);
         label = new JLabel( imageIcon );
         panel.add(label, BorderLayout.CENTER);
 
+        toggleButton.doClick();
+
+        // zoom using spacebar
+        panel.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {}
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                char c = e.getKeyChar();
+                if (c == ' ') {
+                    zoom(panel);
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        });
+
         // add zoom ability. can only zoom in 
         panel.addMouseWheelListener(new MouseWheelListener() {
             public void mouseWheelMoved(MouseWheelEvent e) {
                 int notches = e.getWheelRotation();
                 if (notches > 0) {
-                    if (pixelSize < MAX_ZOOM) {
-                        pixelSize = pixelSize + 1;
-                        resize(panel);
-                    } else {
-                        // System.out.printf("zoom maxed out\n");
-                        try {
-                            replacePixelsWithImages(panel);
-                            replaced = true;
-                            pixelSize = 1;
-                        } catch (Exception e1) {
-                            e1.printStackTrace();
-                        }
-                    }
+                    zoom(panel);
                 }
             }
         });
         scrollPane.setViewportView(panel);
+    }
+
+    public void zoom(JPanel panel) {
+        if (pixelSize < MAX_ZOOM) {
+            pixelSize = pixelSize + 1;
+            resize(panel);
+        } else {
+            // System.out.printf("zoom maxed out\n");
+            try {
+                replacePixelsWithImages(panel);
+                replaced = true;
+                pixelSize = 1;
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -149,6 +171,7 @@ public class ImageZoom {
         label = new JLabel( new ImageIcon(resizedImage) );
         panel.removeAll();
         panel.add(displayInfoMenu());
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
         panel.add(label, BorderLayout.CENTER);
         panel.repaint();
         panel.validate();
@@ -203,7 +226,8 @@ public class ImageZoom {
         numZooms++;
         BufferedImage collage = new BufferedImage(image.getWidth()*pixelSize, image.getHeight()*pixelSize, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = collage.createGraphics();
-        
+
+        long startTime = System.nanoTime();
         // replace each pixel area with new image
         for (int x = 0; x < image.getHeight(); x++) {
             for (int y = 0; y < image.getWidth(); y++) {
@@ -237,6 +261,9 @@ public class ImageZoom {
                 g2d.drawImage(img, x * pixelSize, y * pixelSize, pixelSize, pixelSize, null);
             }
         }
+        long endTime = System.nanoTime();
+        long duration = (endTime - startTime) / 1000000;
+        System.out.println("Time to replace: " + duration + " ms");
         // System.out.printf("files: %s\n", files.toString());
         g2d.dispose();
 
@@ -244,6 +271,7 @@ public class ImageZoom {
         label = new JLabel( new ImageIcon(collage) );
         panel.removeAll();
         panel.add(displayInfoMenu());
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
         panel.add(label, BorderLayout.CENTER);
         panel.repaint();
         panel.validate();
@@ -322,9 +350,49 @@ public class ImageZoom {
         info.setText(stats);
         info.setEditable(false);
         info.setBackground(new Color(255,255,255,200));
-        info.setBounds(5, 5, 280, 120);
+        info.setBounds(5, 50, 280, 120);
     
         return info;
+    }
+
+    public void initializeToggle(JPanel panel) {
+        toggleButton = new JToggleButton("Play");
+        toggleButton.setFocusable(false);
+
+        toggleButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                AbstractButton abstractButton = (AbstractButton) e.getSource();
+                boolean selected = abstractButton.getModel().isSelected();
+
+                Timer timer = new Timer(500, new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        if (numZooms == 4) {
+                            toggleButton.doClick();
+                        }
+                        if (toggleButton.getText().equals("Play")) {
+                            ((Timer) e.getSource()).stop();
+                        } else {
+                            zoom(panel);
+                        }
+                    }
+                });
+
+                if (selected) {
+                    toggleButton.setText("Pause");
+                    timer.start();
+                } else {
+                    toggleButton.setText("Play");
+                }
+            }
+        });
+    }
+
+    public JMenuBar displayMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+        menuBar.add(toggleButton);
+        return menuBar;
     }
 
 }
