@@ -16,19 +16,17 @@ public class ImageZoom {
     private double ZOOM_INCR_PERCENT = 0.5; // percent increase of rendered image side length when zooming
     private int INIT_SIDE_LENGTH = 20;
 
-    private JFrame frmImageZoomIn;
-    private JLabel label = null;
+    private JFrame frame;
     private BufferedImage image = null; 
     private JToggleButton toggleButton;
     private JButton infoButton;
 
     private Map<Integer, String> averageColors; // map of average color to image filename
     private Map<String, ArrayList<int[]>> imageCache = new HashMap<>(); // map of image filename to coordinate location(s) in collage
-    private boolean replaced = false; // true after first replacement occurs
     private int numZooms = 0; // number of collage replacements
     private int imageSideLength; // rendered side length in pixels of one image tile
     private int totalSideLength; // side length in pixels of rendered canvas
-    private int sideLengthInImages; // side length in images of collage
+    private int sideLengthInImages; // rendered side length in images of collage
     private int tempTotalSideLength;
     
     public ImageZoom(File file, Map<Integer, String> averageColors) throws Exception {
@@ -42,11 +40,11 @@ public class ImageZoom {
 
     private void initialize() {
         // create window
-        frmImageZoomIn = new JFrame();
-        frmImageZoomIn.setVisible(true);
-        frmImageZoomIn.setTitle("Infinite Photo Collage");
-        frmImageZoomIn.setBounds(100, 100, 450, 300);
-        frmImageZoomIn.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame = new JFrame();
+        frame.setVisible(true);
+        frame.setTitle("Infinite Photo Collage");
+        frame.setBounds(100, 100, 450, 300);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         imageSideLength = INIT_SIDE_LENGTH;
         totalSideLength = imageSideLength;
@@ -64,20 +62,14 @@ public class ImageZoom {
         JPanel panel = new JPanel();
         panel.setPreferredSize(new Dimension(24, 24));
         panel.setFocusable(true);
-        frmImageZoomIn.getContentPane().add(panel, BorderLayout.CENTER);
+        frame.getContentPane().add(panel, BorderLayout.CENTER);
         panel.setLayout(new BorderLayout());
 
         initializeToggle(panel);
         initializeInfoButton(panel);
 
         image = scaledImage;
-        label = new JLabel( new ImageIcon(scaledImage) );
-        panel.removeAll();
-        panel.add(displayInfoMenu(panel));
-        panel.add(displayMenuBar(), BorderLayout.NORTH);
-        panel.add(label, BorderLayout.CENTER);
-        panel.revalidate();
-        panel.repaint();
+        updateWindow(panel, scaledImage);
 
         // zoom using spacebar
         panel.addKeyListener(new KeyListener() {
@@ -118,7 +110,6 @@ public class ImageZoom {
             try {
                 imageSideLength = INIT_MAX_ZOOM;
                 collageReplacement(panel);
-                replaced = true;
             } catch (Exception e1) {
                 e1.printStackTrace();
             }
@@ -137,49 +128,43 @@ public class ImageZoom {
         BufferedImage resizedImage;
         
         // crop to avoid heap space 
-        int width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
+        int width = Math.max(frame.getWidth(), frame.getHeight());
         if (totalSideLength > width) {
             int widthInImages = (int) Math.ceil((double) width / (double) imageSideLength);
             if (widthInImages % 2 != 0) {
                 widthInImages += 1;
             }
             width = widthInImages * imageSideLength;
+            totalSideLength = width;
             resizedImage = new BufferedImage(width, width, BufferedImage.TYPE_INT_RGB);
         } else {
             resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
         }
 
+        // draw cropped collage
         Graphics2D graphics2D = resizedImage.createGraphics();
-
         drawImageByImage(graphics2D, width);
-
         graphics2D.dispose();
 
         // place resized image in new jlabel and replace old
-        label = new JLabel( new ImageIcon(resizedImage) );
-        panel.removeAll();
-        panel.add(displayInfoMenu(panel));
-        panel.add(displayMenuBar(), BorderLayout.NORTH);
-        panel.add(label, BorderLayout.CENTER);
-        panel.revalidate();
-        panel.repaint();
+        updateWindow(panel, resizedImage);
     }
 
     /**
      * Draw collage image by image
      * @param g2d
      */
-    public void drawImageByImage(Graphics2D g2d, double width) throws Exception {
+    public void drawImageByImage(Graphics2D g2d, double frameWidthInPixels) throws Exception {
         for (String filename : imageCache.keySet()) {
             for (int[] coord : imageCache.get(filename)) {
                 
-                double frameWidthInImages = width / imageSideLength;
+                double frameWidthInImages = frameWidthInPixels / imageSideLength;
                 if (Math.ceil(frameWidthInImages) % 2 != 0) {
                     frameWidthInImages += 1;
                 }
                 frameWidthInImages = (int) frameWidthInImages;
                 int croppedBound = 0;
-                if (totalSideLength > width) {
+                if (totalSideLength > frameWidthInPixels) {
                     croppedBound = (int) Math.ceil((sideLengthInImages - frameWidthInImages) / 2);
                 }
                 
@@ -215,27 +200,19 @@ public class ImageZoom {
         numZooms++;
         cacheImagesForCollage(image);
 
-        // draw cropped collage
-        double width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
-        // if (totalSideLength > width) {
-        //     totalSideLength = (int) Math.ceil((double) (tempTotalSideLength * imageSideLength * (1 + ZOOM_INCR_PERCENT)));
-        // }
+        // recalculate side length
+        double frameWidthInPixels = Math.max(frame.getWidth(), frame.getHeight());
         imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
         totalSideLength = imageSideLength * sideLengthInImages;
+        
+        // draw cropped collage
         BufferedImage collage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = collage.createGraphics();
-
-        drawImageByImage(g2d, width);
+        drawImageByImage(g2d, frameWidthInPixels);
         g2d.dispose();
 
         // place collage in new jlabel and replace old
-        label = new JLabel( new ImageIcon(collage) );
-        panel.removeAll();
-        panel.add(displayInfoMenu(panel));
-        panel.add(displayMenuBar(), BorderLayout.NORTH);
-        panel.add(label, BorderLayout.CENTER);
-        panel.revalidate();
-        panel.repaint();
+        updateWindow(panel, collage);
         image = collage;
     }
 
@@ -340,21 +317,34 @@ public class ImageZoom {
         return menuBar;
     }
 
+    public void updateWindow(JPanel panel, BufferedImage img) {
+        // System.out.println(img.getRGB(0, 0));
+        // System.out.println(img.getWidth() + "," + img.getHeight());
+        System.out.println("total side length: " + totalSideLength);
+        System.out.println("side length in images: " + sideLengthInImages);
+
+        JLabel label = new JLabel( new ImageIcon(img) );
+        panel.removeAll();
+        panel.add(displayInfoMenu(panel));
+        panel.add(displayMenuBar(), BorderLayout.NORTH);
+        panel.add(label, BorderLayout.CENTER);
+        panel.revalidate();
+        panel.repaint();
+    }
+
     /**
      * Match images to replace parentImage using a map of average colors
      * @param parentImage
      */
     public void cacheImagesForCollage(BufferedImage parentImage) {
         imageCache = new HashMap<>();
-        int numPixels = 0;
-
         int startX = 0;
         int startY = 0;
         int endX = parentImage.getWidth();
         int endY = parentImage.getHeight();
 
-        double width = Math.max(frmImageZoomIn.getWidth(), frmImageZoomIn.getHeight());
-        int frameWidthInImages = (int) Math.ceil(width / imageSideLength);
+        double frameWidthInPixels = Math.max(frame.getWidth(), frame.getHeight());
+        int frameWidthInImages = (int) Math.ceil(frameWidthInPixels / imageSideLength);
         int maxSideLengthInImages = Math.max(parentImage.getHeight(), parentImage.getWidth());
         if (maxSideLengthInImages > frameWidthInImages) {
             int croppedBoundFromCenter = (int) Math.ceil(frameWidthInImages / 2);
@@ -374,7 +364,6 @@ public class ImageZoom {
         
         for (int x = startX; x < endX; x++) {
             for (int y = startY; y < endY; y++) {
-                numPixels++;
 
                 ArrayList<int[]> coordinates = new ArrayList<>();
                 int pixelColor = parentImage.getRGB(x, y);
