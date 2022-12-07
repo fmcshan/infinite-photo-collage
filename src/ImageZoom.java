@@ -136,6 +136,7 @@ public class ImageZoom {
             }
             width = widthInImages * imageSideLength;
             totalSideLength = width;
+//            sideLengthInImages = widthInImages;
             resizedImage = new BufferedImage(width, width, BufferedImage.TYPE_INT_RGB);
         } else {
             resizedImage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
@@ -155,19 +156,17 @@ public class ImageZoom {
      * @param g2d
      */
     public void drawImageByImage(Graphics2D g2d, double frameWidthInPixels) throws Exception {
+        double frameWidthInImages = frameWidthInPixels / imageSideLength;
+        if (Math.ceil(frameWidthInImages) % 2 != 0) {
+            frameWidthInImages += 1;
+        }
+        frameWidthInImages = (int) frameWidthInImages;
+        int croppedBound = 0;
+        if (totalSideLength == frameWidthInPixels) {
+            croppedBound = (int) Math.ceil((sideLengthInImages - frameWidthInImages) / 2);
+        }
         for (String filename : imageCache.keySet()) {
             for (int[] coord : imageCache.get(filename)) {
-                
-                double frameWidthInImages = frameWidthInPixels / imageSideLength;
-                if (Math.ceil(frameWidthInImages) % 2 != 0) {
-                    frameWidthInImages += 1;
-                }
-                frameWidthInImages = (int) frameWidthInImages;
-                int croppedBound = 0;
-                if (totalSideLength > frameWidthInPixels) {
-                    croppedBound = (int) Math.ceil((sideLengthInImages - frameWidthInImages) / 2);
-                }
-                
                 if ((coord[0] >= croppedBound && coord[0] <= sideLengthInImages - croppedBound)
                 && (coord[1] >= croppedBound && coord[1] <= sideLengthInImages - croppedBound)
                 ){
@@ -322,6 +321,7 @@ public class ImageZoom {
         // System.out.println(img.getWidth() + "," + img.getHeight());
         System.out.println("total side length: " + totalSideLength);
         System.out.println("side length in images: " + sideLengthInImages);
+        System.out.println();
 
         JLabel label = new JLabel( new ImageIcon(img) );
         panel.removeAll();
