@@ -13,8 +13,8 @@ public class ImageZoom {
 
     int MAX_ZOOM = 100; // max side length 1 image tile before collage replacement
     int INIT_MAX_ZOOM = 10; // max side length of 1 original pixel before image replacement
-    private double ZOOM_INCR_PERCENT = 0.5; // percent increase of rendered image side length when zooming
-    private int INIT_SIDE_LENGTH = 20;
+    private double ZOOM_INCR_PERCENT = 0.2; // percent increase of rendered image side length when zooming
+    private int INIT_SIDE_LENGTH = 10;
 
     private JFrame frame;
     private BufferedImage image = null; 
@@ -166,12 +166,12 @@ public class ImageZoom {
             croppedBound = (int) Math.ceil((sideLengthInImages - frameWidthInImages) / 2);
         }
         for (String filename : imageCache.keySet()) {
+            BufferedImage img = ImageIO.read(new File(filename));
             for (int[] coord : imageCache.get(filename)) {
                 if ((coord[0] >= croppedBound && coord[0] <= sideLengthInImages - croppedBound)
                 && (coord[1] >= croppedBound && coord[1] <= sideLengthInImages - croppedBound)
                 ){
                     // crop image to be square without distortion
-                    BufferedImage img = ImageIO.read(new File(filename));
                     int min = img.getWidth();
                     if (img.getWidth() > img.getHeight()) {
                     min = img.getHeight();
@@ -201,7 +201,7 @@ public class ImageZoom {
 
         // recalculate side length
         double frameWidthInPixels = Math.max(frame.getWidth(), frame.getHeight());
-        imageSideLength = (int) (Math.ceil((double) totalSideLength / (double) sideLengthInImages) * (1 + ZOOM_INCR_PERCENT));
+        imageSideLength = (int) (Math.ceil(imageSideLength * (1 + (ZOOM_INCR_PERCENT / 2))));
         totalSideLength = imageSideLength * sideLengthInImages;
         
         // draw cropped collage
@@ -264,7 +264,7 @@ public class ImageZoom {
                 AbstractButton abstractButton = (AbstractButton) e.getSource();
                 boolean selected = abstractButton.getModel().isSelected();
 
-                Timer timer = new Timer(1000, new ActionListener() {
+                Timer timer = new Timer(700, new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         if (toggleButton.getText().equals("Play")) {
@@ -319,9 +319,9 @@ public class ImageZoom {
     public void updateWindow(JPanel panel, BufferedImage img) {
         // System.out.println(img.getRGB(0, 0));
         // System.out.println(img.getWidth() + "," + img.getHeight());
-        System.out.println("total side length: " + totalSideLength);
-        System.out.println("side length in images: " + sideLengthInImages);
-        System.out.println();
+        // System.out.println("total side length: " + totalSideLength);
+        // System.out.println("side length in images: " + sideLengthInImages);
+        // System.out.println();
 
         JLabel label = new JLabel( new ImageIcon(img) );
         panel.removeAll();
