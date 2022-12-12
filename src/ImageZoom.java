@@ -5,8 +5,15 @@ import javax.swing.plaf.FontUIResource;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.MathContext;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class ImageZoom {
@@ -28,6 +35,7 @@ public class ImageZoom {
     private int totalSideLength; // side length in pixels of rendered canvas
     private int sideLengthInImages; // rendered side length in images of collage
     private int tempTotalSideLength;
+    private BigInteger theoreticalTotalSideLength = BigInteger.valueOf(INIT_SIDE_LENGTH);
     
     public ImageZoom(File file, Map<Integer, String> averageColors) throws Exception {
         ArrayList<int[]> list = new ArrayList<>();
@@ -125,6 +133,7 @@ public class ImageZoom {
         // calculate new total side length = width = height
         imageSideLength = (int)(imageSideLength * (1 + ZOOM_INCR_PERCENT));
         totalSideLength = (int)(imageSideLength * sideLengthInImages);
+        theoreticalTotalSideLength = new BigDecimal(theoreticalTotalSideLength).multiply(BigDecimal.valueOf(1 + (ZOOM_INCR_PERCENT)), new MathContext(BigDecimal.ROUND_CEILING)).toBigInteger();
         BufferedImage resizedImage;
         
         // crop to avoid heap space 
@@ -203,6 +212,7 @@ public class ImageZoom {
         double frameWidthInPixels = Math.max(frame.getWidth(), frame.getHeight());
         imageSideLength = (int) (Math.ceil(imageSideLength * (1 + (ZOOM_INCR_PERCENT / 2))));
         totalSideLength = imageSideLength * sideLengthInImages;
+        theoreticalTotalSideLength = new BigDecimal(theoreticalTotalSideLength).multiply(BigDecimal.valueOf(1 + (ZOOM_INCR_PERCENT / 2)), new MathContext(BigDecimal.ROUND_CEILING)).toBigInteger();
         
         // draw cropped collage
         BufferedImage collage = new BufferedImage(totalSideLength, totalSideLength, BufferedImage.TYPE_INT_RGB);
@@ -237,7 +247,11 @@ public class ImageZoom {
         
         String imageLength = "Image side length: " + imageSideLength + " px\n";
         String zooms = "Collage replacements: " + numZooms + "\n";
-        String stats = imageLength + zooms; 
+
+        NumberFormat formatter = new DecimalFormat("0.######E0", DecimalFormatSymbols.getInstance(Locale.ROOT));
+        String theoreticalLength = formatter.format(theoreticalTotalSideLength);
+        String theoretical = "Total side length: " + theoreticalLength + "px\n";
+        String stats = imageLength + zooms + theoretical;
 
         // set styling
         Font font = new FontUIResource(Font.MONOSPACED, Font.BOLD, 16);
