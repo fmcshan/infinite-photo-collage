@@ -247,11 +247,12 @@ public class ImageZoom {
         
         String imageLength = "Image side length: " + imageSideLength + " px\n";
         String zooms = "Collage replacements: " + numZooms + "\n";
+        String threshold = "Image side length threshold: " + MAX_ZOOM + " px\n";
 
         NumberFormat formatter = new DecimalFormat("0.######E0", DecimalFormatSymbols.getInstance(Locale.ROOT));
         String theoreticalLength = formatter.format(theoreticalTotalSideLength);
-        String theoretical = "Total side length: " + theoreticalLength + "px\n";
-        String stats = imageLength + zooms + theoretical;
+        String theoretical = "Total side length: " + theoreticalLength + " px\n";
+        String stats = threshold + imageLength + zooms + theoretical;
 
         // set styling
         Font font = new FontUIResource(Font.MONOSPACED, Font.BOLD, 16);
