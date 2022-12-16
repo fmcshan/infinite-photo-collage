@@ -74,7 +74,7 @@ public class ImageZoom {
         panel.setLayout(new BorderLayout());
 
         initializeToggle(panel);
-        initializeInfoButton(panel);
+        initializeInfoButton();
 
         image = scaledImage;
         updateWindow(panel, scaledImage);
@@ -300,7 +300,7 @@ public class ImageZoom {
         });
     }
 
-    public void initializeInfoButton(JPanel panel) {
+    public void initializeInfoButton() {
         infoButton = new JButton("Details");
         infoButton.setFocusable(false);
 
@@ -309,16 +309,21 @@ public class ImageZoom {
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 if (e.getSource() == infoButton) {
                     JFrame popup = new JFrame();
-                    JPanel panel = new JPanel();
                     popup.setTitle("Infinite Photo Collage");
                     popup.setBounds(300, 300, 400, 600);
                     popup.setVisible(true);
-                    popup.add(panel);
 
-                    JTextArea info = new JTextArea("Welcome to Infinite Photo Collage. \n" +
-                            "");
+                    JTextArea info = new JTextArea("Welcome to Infinite Photo Collage. \n\n" +
+                            "1. Begin by selecting a directory of images from your file system. Once a directory has been selected, a random image from that directory will appear in a new window.\n\n" +
+                            "2. You can zoom in on the image by pressing the spacebar, scrolling on a trackpad, or using a mouse wheel. You can also use the autoplay feature to automate this by clicking the “Play” button. The “Pause” button can then be clicked to stop autoplay.\n\n" +
+                            "3. After a certain threshold, the image will be replaced by a collage of smaller images that collectively resemble the original image. \n\n" +
+                            "4. You can continue zooming in on the collage, and after the threshold, it too will be replaced with another collage of smaller images. This process can repeat infinitely.");
                     info.setEditable(false);
-                    panel.add(info, BorderLayout.CENTER);
+                    info.setLineWrap(true);
+                    info.setWrapStyleWord(true);
+                    info.setMargin( new Insets(10,10,10,10));
+
+                    popup.getContentPane().add(info, BorderLayout.CENTER);
                 }
             }
         });

@@ -16,6 +16,7 @@ public class FileUpload {
   private JPanel panel = new JPanel();
   private JTextArea prompt = new JTextArea("");
   private JButton fileUploadBtn = new JButton("Choose directory");
+  private JButton infoButton;
   double EDGE_TOLERANCE = 0.4; // percent of image width/height to ignore around edges when color matching
   private BufferedImage image;
   private ImageZoom imageZoom;
@@ -36,18 +37,32 @@ public class FileUpload {
 
   public BufferedImage run() throws Exception {
     frame.setTitle("Infinite Photo Collage");
-    frame.setBounds(100, 100, 450, 300);
+    frame.setBounds(100, 100, 450, 425);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.setVisible(true);
+    frame.setResizable(false);
     frame.add(panel);
 
     fileUploadBtn.setFocusable(false);
 
-    prompt.setText("Select a directory of images to upload.");
+    prompt.setText("Welcome to Infinite Photo Collage. \n\n" +
+            "1. Begin by selecting a directory of images from your file system. Once a directory has been selected, a random image from that directory will appear in a new window.\n\n" +
+            "2. You can zoom in on the image by pressing the spacebar, scrolling on a trackpad, or using a mouse wheel. You can also use the autoplay feature to automate this by clicking the “Play” button. The “Pause” button can then be clicked to stop autoplay.\n\n" +
+            "3. After a certain threshold, the image will be replaced by a collage of smaller images that collectively resemble the original image. \n\n" +
+            "4. You can continue zooming in on the collage, and after the threshold, it too will be replaced with another collage of smaller images. This process can repeat infinitely. \n\n\n\n" +
+            "Select a directory of images to upload:");
     prompt.setEditable(false);
-    panel.add(prompt, BorderLayout.CENTER);
-    panel.add(fileUploadBtn, BorderLayout.CENTER);
+    prompt.setLineWrap(true);
+    prompt.setWrapStyleWord(true);
+    prompt.setMargin( new Insets(10,10,10,10));
+
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    panel.add(prompt);
+    panel.add(fileUploadBtn);
     panel.setFocusable(true);
+
+    prompt.setAlignmentX(Component.LEFT_ALIGNMENT);
+    fileUploadBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     fileUploadBtn.addActionListener(new ActionListener() {
       @Override
