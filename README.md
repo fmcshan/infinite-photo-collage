@@ -1,13 +1,10 @@
 # Infinite Photo Collage
 Contributors: Liliana Foucault, Frank McShan, Molly Sunray
 
-### How to run
-Open this project folder in a terminal and run the following:
-```
-javac src/ImageZoom.java
-java src/ImageZoom
-```
-You will then be prompted for the name of the starting image. You must include the directory name at the beginning (if any) and image type at the end of the name (eg. ".jpg", ".png", etc.). An example could be `images/cat_0001.jpg`.
+Begin by selecting a directory of images from your file system. Once a directory has been selected, a random image from that directory will appear in a new window.
 
-### How to use
-To zoom in, you may use a mouse or trackpad. To pan, you may use the bottom and righthand scroll bars. A panel with debug information will be in the top left corner of the window.
+You can zoom in on the image by pressing the spacebar, scrolling on a trackpad, or using a mouse wheel. You can also use the autoplay feature to automate this by clicking the “Play” button. The “Pause” button can then be clicked to stop autoplay.
+
+After a certain threshold, the image will be replaced by a collage of smaller images that collectively resemble the original image.
+
+You can continue zooming in on the collage, and after the threshold, it too will be replaced with another collage of smaller images. This process can repeat infinitely.
